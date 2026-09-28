@@ -1,0 +1,13 @@
+{
+  "name": "yogscast-on-this-day",
+  "version": "1.0.0",
+  "private": true,
+  "description": "On This Day in Yogscast History — fan site data pipeline",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "backfill": "node scripts/backfill.js",
+    "update": "node scripts/update.js"
+  }
+}

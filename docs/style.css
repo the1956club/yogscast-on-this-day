@@ -62,8 +62,9 @@ main {
 }
 
 .current-desc {
-  margin: 6px 0 0;
+  margin: 20px 0 36px;
   color: var(--text-muted);
+  text-align: left;
 }
 
 .section-heading {
@@ -137,7 +138,7 @@ main {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: min(320px, 46vw);
+  width: min(760px, 86vw);
   aspect-ratio: 16 / 9;
   border-radius: var(--radius);
   overflow: hidden;
@@ -191,8 +192,8 @@ main {
 }
 
 .carousel-item .play-hint svg {
-  width: 48px;
-  height: 48px;
+  width: 64px;
+  height: 64px;
   filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
 }
 

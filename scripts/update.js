@@ -10,7 +10,7 @@
 // exist yet, it just does a full backfill instead.
 
 const fs = require("fs");
-const { getUploadsPlaylistId, getPlaylistPage } = require("./lib/youtube");
+const { getUploadsPlaylistId, getPlaylistPage, getViewCounts } = require("./lib/youtube");
 const { loadAllVideos, saveAll, ALL_VIDEOS_PATH } = require("./lib/dataset");
 
 const CHANNEL_ID = "UCH-_hzb2ILSCo9ftVSnrCIQ"; // The Yogscast (main channel)
@@ -22,45 +22,51 @@ async function main() {
     process.exit(1);
   }
 
-  if (!fs.existsSync(ALL_VIDEOS_PATH)) {
-    console.log("No existing dataset found, running a full backfill instead.");
-    require("./backfill");
-    return;
-  }
+if (!fs.existsSync(ALL_VIDEOS_PATH)) {
+  console.log("No existing dataset found, running a full backfill instead.");
+  require("./backfill");
+  return;
+}
 
-  const existing = loadAllVideos();
+const existing = loadAllVideos();
   const knownIds = new Set(existing.map((v) => v.videoId));
 
-  console.log("Looking up uploads playlist...");
+console.log("Looking up uploads playlist...");
   const playlistId = await getUploadsPlaylistId(CHANNEL_ID, apiKey);
 
-  const newVideos = [];
+const newVideos = [];
   let pageToken = undefined;
   let page = 0;
   let hitKnownVideo = false;
 
-  do {
-    page += 1;
-    const { videos, nextPageToken } = await getPlaylistPage(playlistId, pageToken, apiKey);
+do {
+  page += 1;
+  const { videos, nextPageToken } = await getPlaylistPage(playlistId, pageToken, apiKey);
 
-    for (const v of videos) {
-      if (knownIds.has(v.videoId)) {
-        hitKnownVideo = true;
-        break;
-      }
-      newVideos.push(v);
+  for (const v of videos) {
+    if (knownIds.has(v.videoId)) {
+      hitKnownVideo = true;
+      break;
     }
-
-    pageToken = hitKnownVideo ? undefined : nextPageToken;
-    console.log(`Page ${page}: +${newVideos.length} new videos so far`);
-  } while (pageToken);
-
-  if (newVideos.length === 0) {
-    console.log("No new videos since the last run.");
-    return;
+    newVideos.push(v);
   }
 
-  const { total, days } = saveAll([...existing, ...newVideos]);
+  pageToken = hitKnownVideo ? undefined : nextPageToken;
+  console.log(`Page ${page}: +${newVideos.length} new videos so far`);
+} while (pageToken);
+
+if (newVideos.length === 0) {
+  console.log("No new videos since the last run.");
+  return;
+}
+
+console.log(`Fetching view counts for ${newVideos.length} new video(s)...`);
+  const viewCounts = await getViewCounts(newVideos.map((v) => v.videoId), apiKey);
+  for (const v of newVideos) {
+    v.viewCount = viewCounts.get(v.videoId) || 0;
+  }
+
+const { total, days } = saveAll([...existing, ...newVideos]);
   console.log(`\nAdded ${newVideos.length} new video(s). Dataset now has ${total} videos across ${days} days.`);
 }
 

@@ -147,8 +147,8 @@
     refreshAll();
   }
 
-  // Centers AND plays a video immediately (used when a card is clicked in
-  // the "Also on this day" grid below).
+  // Centers AND plays a video immediately (used on first load and when a
+  // card is clicked in the "Also on this day" grid below).
   function playAt(idx) {
     const n = allEntries.length;
     centerIndex = ((idx % n) + n) % n;
@@ -193,9 +193,12 @@
 
       const abs = Math.abs(diff);
       const visible = abs <= 1;
-      const scale = diff === 0 ? 1 : 0.42;
-      const offset = diff * w * 0.56;
-      const opacity = diff === 0 ? 1 : abs === 1 ? 0.55 : 0;
+      // Side neighbours are bigger and more opaque than before, and the
+      // carousel wrap is now full-bleed (see .carousel-wrap in style.css),
+      // so there's plenty of room either side of the large centered video.
+      const scale = diff === 0 ? 1 : 0.62;
+      const offset = diff * w * 0.64;
+      const opacity = diff === 0 ? 1 : abs === 1 ? 0.85 : 0;
 
       el.style.transform = `translate(-50%, -50%) translateX(${offset}px) scale(${scale})`;
       el.style.opacity = String(opacity);

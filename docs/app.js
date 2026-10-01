@@ -4,11 +4,20 @@
   const resultsEl = document.getElementById("results");
   const moreHeadingEl = document.getElementById("more-heading");
 
-  const featuredEl = document.getElementById("featured");
-  const featuredPlayerEl = document.getElementById("featured-player");
-  const featuredYearEl = document.getElementById("featured-year");
-  const featuredTitleEl = document.getElementById("featured-title");
-  const featuredDescEl = document.getElementById("featured-desc");
+  const currentInfoEl = document.getElementById("current-info");
+  const currentTitleEl = document.getElementById("current-title");
+  const currentDescEl = document.getElementById("current-desc");
+
+  const carouselWrapEl = document.getElementById("carousel-wrap");
+  const carouselViewportEl = document.getElementById("carousel-viewport");
+  const carouselTrackEl = document.getElementById("carousel-track");
+  const carouselPrevEl = document.getElementById("carousel-prev");
+  const carouselNextEl = document.getElementById("carousel-next");
+
+  const PLAY_ICON = `
+    <span class="play-hint">
+      <svg viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"></path></svg>
+    </span>`;
 
   const today = new Date();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
@@ -18,7 +27,9 @@
   todayLabelEl.textContent = `On the ${ordinal(today.getDate())} of ${today.toLocaleDateString(undefined, { month: "long" })}…`;
 
   let allEntries = [];
-  let featuredVideoId = null;
+  let itemEls = [];
+  let centerIndex = 0;
+  let playingIndex = null;
 
   try {
     const res = await fetch("data/videos-by-day.json", { cache: "no-store" });
@@ -26,13 +37,13 @@
     const byDay = await res.json();
 
     const entries = byDay[todayKey] || [];
-    render(entries);
+    init(entries);
   } catch (err) {
     console.error(err);
     statusEl.textContent = "Couldn't load the video data right now — try refreshing.";
   }
 
-  function render(entries) {
+  function init(entries) {
     statusEl.remove();
 
     if (entries.length === 0) {
@@ -45,37 +56,42 @@
     }
 
     allEntries = entries;
-    featuredVideoId = pickMostViewed(entries).videoId;
-    renderCurrent();
+
+    // Build the carousel's DOM once; only positions/content get mutated
+    // afterwards so the CSS transition animates smoothly as you browse.
+    itemEls = allEntries.map((video, idx) => buildCarouselItem(video, idx));
+    itemEls.forEach((el) => carouselTrackEl.appendChild(el));
+
+    carouselWrapEl.hidden = false;
+    currentInfoEl.hidden = false;
+
+    carouselPrevEl.addEventListener("click", () => goTo(centerIndex - 1));
+    carouselNextEl.addEventListener("click", () => goTo(centerIndex + 1));
+    carouselPrevEl.hidden = allEntries.length <= 1;
+    carouselNextEl.hidden = allEntries.length <= 1;
+
+    carouselWrapEl.tabIndex = 0;
+    carouselWrapEl.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft") goTo(centerIndex - 1);
+      if (event.key === "ArrowRight") goTo(centerIndex + 1);
+    });
+
+    setupSwipe();
+    window.addEventListener("resize", () => {
+      setViewportHeight();
+      updatePositions();
+    });
+
+    const startVideo = pickMostViewed(allEntries);
+    const startIndex = allEntries.findIndex((v) => v.videoId === startVideo.videoId);
+
+    setViewportHeight();
+    // Auto-plays the headline pick on load, same as before. Browsing the
+    // carousel after this only previews — you click the centered video to
+    // actually start playing it.
+    playAt(startIndex === -1 ? 0 : startIndex);
   }
 
-  // Re-renders the featured section + grid based on which video is
-  // currently selected as featured (featuredVideoId), without re-fetching
-  // anything. Called on first load and whenever a grid card is clicked.
-  function renderCurrent() {
-    const featured =
-      allEntries.find((v) => v.videoId === featuredVideoId) || pickMostViewed(allEntries);
-    featuredVideoId = featured.videoId;
-
-    renderFeatured(featured);
-
-    const rest = allEntries.filter((v) => v.videoId !== featured.videoId);
-    resultsEl.innerHTML = "";
-    if (rest.length > 0) {
-      moreHeadingEl.hidden = false;
-      const grid = document.createElement("div");
-      grid.className = "year-grid";
-      for (const video of rest) {
-        grid.appendChild(renderCard(video));
-      }
-      resultsEl.appendChild(grid);
-    } else {
-      moreHeadingEl.hidden = true;
-    }
-  }
-
-  // Picks the most-viewed video (ties broken by most recent year). Falls
-  // back to the newest video if view counts aren't in the dataset yet.
   function pickMostViewed(entries) {
     return [...entries].sort((a, b) => {
       const byViews = (b.viewCount || 0) - (a.viewCount || 0);
@@ -83,10 +99,25 @@
     })[0];
   }
 
-  function renderFeatured(video) {
-    featuredEl.hidden = false;
+  function buildCarouselItem(video, idx) {
+    const el = document.createElement("div");
+    el.className = "carousel-item";
+    el.dataset.index = String(idx);
+    renderThumb(el, video);
+    el.addEventListener("click", () => onItemClick(idx));
+    return el;
+  }
 
-    featuredPlayerEl.innerHTML = `
+  function renderThumb(el, video) {
+    el.innerHTML = `
+      <img src="https://i.ytimg.com/vi/${video.videoId}/mqdefault.jpg" loading="lazy" alt="" />
+      <span class="year-badge">${video.year}</span>
+      ${PLAY_ICON}
+    `;
+  }
+
+  function renderPlayer(el, video) {
+    el.innerHTML = `
       <iframe
         src="https://www.youtube-nocookie.com/embed/${video.videoId}?autoplay=1"
         title="${escapeHtml(video.title)}"
@@ -95,10 +126,127 @@
         allowfullscreen
       ></iframe>
     `;
+  }
 
-    featuredYearEl.textContent = video.year;
-    featuredTitleEl.textContent = video.title;
-    featuredDescEl.textContent = firstLine(video.description);
+  function onItemClick(idx) {
+    if (idx === centerIndex) {
+      if (playingIndex !== idx) playAt(idx);
+      return;
+    }
+    goTo(idx);
+  }
+
+  // Moves a new video to the center slot. Does NOT start playback — browsing
+  // the carousel (arrows, swipe, or clicking a side item) only previews;
+  // you click the centered video itself to actually play it.
+  function goTo(idx) {
+    const n = allEntries.length;
+    centerIndex = ((idx % n) + n) % n;
+    stopPlayback();
+    refreshAll();
+  }
+
+  // Centers AND plays a video immediately (used on first load and when a
+  // card is clicked in the "Also on this day" grid below).
+  function playAt(idx) {
+    const n = allEntries.length;
+    centerIndex = ((idx % n) + n) % n;
+    if (playingIndex !== null && playingIndex !== centerIndex) {
+      renderThumb(itemEls[playingIndex], allEntries[playingIndex]);
+    }
+    playingIndex = centerIndex;
+    renderPlayer(itemEls[centerIndex], allEntries[centerIndex]);
+    refreshAll();
+  }
+
+  function stopPlayback() {
+    if (playingIndex !== null) {
+      renderThumb(itemEls[playingIndex], allEntries[playingIndex]);
+      playingIndex = null;
+    }
+  }
+
+  function refreshAll() {
+    updatePositions();
+    updateCurrentInfo();
+    renderGrid();
+  }
+
+  function getItemWidth() {
+    return itemEls[0] ? itemEls[0].offsetWidth : 320;
+  }
+
+  function setViewportHeight() {
+    const w = getItemWidth();
+    carouselViewportEl.style.height = `${Math.round((w * 9) / 16) + 16}px`;
+  }
+
+  function updatePositions() {
+    const n = allEntries.length;
+    const w = getItemWidth();
+
+    itemEls.forEach((el, idx) => {
+      let diff = idx - centerIndex;
+      if (diff > n / 2) diff -= n;
+      if (diff < -n / 2) diff += n;
+
+      const abs = Math.abs(diff);
+      const visible = abs <= 2;
+      const scale = diff === 0 ? 1 : abs === 1 ? 0.72 : 0.52;
+      const offset = diff * w * 0.62;
+      const opacity = diff === 0 ? 1 : abs === 1 ? 0.75 : abs === 2 ? 0.4 : 0;
+
+      el.style.transform = `translate(-50%, -50%) translateX(${offset}px) scale(${scale})`;
+      el.style.opacity = String(opacity);
+      el.style.zIndex = String(10 - abs);
+      el.style.pointerEvents = visible ? "auto" : "none";
+      el.classList.toggle("is-center", diff === 0);
+    });
+  }
+
+  function updateCurrentInfo() {
+    const video = allEntries[centerIndex];
+    currentTitleEl.textContent = video.title;
+    currentDescEl.textContent = firstLine(video.description);
+  }
+
+  function setupSwipe() {
+    let startX = null;
+
+    carouselViewportEl.addEventListener("pointerdown", (event) => {
+      startX = event.clientX;
+    });
+    carouselViewportEl.addEventListener("pointerup", (event) => {
+      if (startX === null) return;
+      const delta = event.clientX - startX;
+      startX = null;
+      if (Math.abs(delta) < 40) return;
+      if (delta < 0) goTo(centerIndex + 1);
+      else goTo(centerIndex - 1);
+    });
+    carouselViewportEl.addEventListener("pointercancel", () => {
+      startX = null;
+    });
+  }
+
+  // The grid always excludes whichever video is currently centered in the
+  // carousel above, so there's no duplicate between the two.
+  function renderGrid() {
+    const rest = allEntries.filter((_, idx) => idx !== centerIndex);
+
+    resultsEl.innerHTML = "";
+    if (rest.length === 0) {
+      moreHeadingEl.hidden = true;
+      return;
+    }
+
+    moreHeadingEl.hidden = false;
+    const grid = document.createElement("div");
+    grid.className = "year-grid";
+    for (const video of rest) {
+      grid.appendChild(renderCard(video));
+    }
+    resultsEl.appendChild(grid);
   }
 
   function renderCard(video) {
@@ -107,7 +255,7 @@
     a.href = `https://www.youtube.com/watch?v=${video.videoId}`;
     a.rel = "noopener noreferrer";
 
-    // Left-click plays the video right here on the page instead of
+    // Left-click plays the video right here in the carousel instead of
     // navigating away. Cmd/ctrl/shift-click (or middle-click) still opens
     // it on YouTube in a new tab, since the href is left intact.
     a.addEventListener("click", (event) => {
@@ -116,9 +264,9 @@
         return;
       }
       event.preventDefault();
-      featuredVideoId = video.videoId;
-      renderCurrent();
-      featuredEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      const idx = allEntries.findIndex((v) => v.videoId === video.videoId);
+      if (idx !== -1) playAt(idx);
+      carouselWrapEl.scrollIntoView({ behavior: "smooth", block: "center" });
     });
 
     const publishedDate = new Date(video.publishedAt);

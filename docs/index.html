@@ -13,15 +13,26 @@
 </head>
 <body>
   <header class="site-header">
-    <h1>On This Day, <span id="today-label">&hellip;</span></h1>
-    <p class="subtitle">Every Yogscast main-channel video uploaded on this date, across the years.</p>
+    <h1 id="today-label">On the &hellip;</h1>
   </header>
 
   <!-- Ad slot: swap this div for your AdSense <ins> tag once approved. -->
   <div class="ad-slot" id="ad-slot-top" aria-hidden="true"></div>
 
-  <main id="results">
+  <main>
     <p class="status" id="status">Loading&hellip;</p>
+
+    <section class="featured" id="featured" hidden>
+      <div class="featured-player" id="featured-player"></div>
+      <div class="featured-meta">
+        <p class="featured-year" id="featured-year"></p>
+        <h2 class="featured-title" id="featured-title"></h2>
+        <p class="featured-desc" id="featured-desc"></p>
+      </div>
+    </section>
+
+    <h2 class="section-heading" id="more-heading" hidden>Also on this day</h2>
+    <div id="results"></div>
   </main>
 
   <div class="ad-slot" id="ad-slot-bottom" aria-hidden="true"></div>

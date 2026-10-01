@@ -64,6 +64,7 @@
 
     carouselWrapEl.hidden = false;
     currentInfoEl.hidden = false;
+    currentDescEl.hidden = false;
 
     carouselPrevEl.addEventListener("click", () => goTo(centerIndex - 1));
     carouselNextEl.addEventListener("click", () => goTo(centerIndex + 1));
@@ -86,10 +87,10 @@
     const startIndex = allEntries.findIndex((v) => v.videoId === startVideo.videoId);
 
     setViewportHeight();
-    // Auto-plays the headline pick on load, same as before. Browsing the
-    // carousel after this only previews — you click the centered video to
+    // Centers the headline pick on load but does NOT auto-play it — same
+    // as browsing the carousel afterwards, you click the centered video to
     // actually start playing it.
-    playAt(startIndex === -1 ? 0 : startIndex);
+    goTo(startIndex === -1 ? 0 : startIndex);
   }
 
   function pickMostViewed(entries) {
@@ -146,8 +147,8 @@
     refreshAll();
   }
 
-  // Centers AND plays a video immediately (used on first load and when a
-  // card is clicked in the "Also on this day" grid below).
+  // Centers AND plays a video immediately (used when a card is clicked in
+  // the "Also on this day" grid below).
   function playAt(idx) {
     const n = allEntries.length;
     centerIndex = ((idx % n) + n) % n;
@@ -191,10 +192,10 @@
       if (diff < -n / 2) diff += n;
 
       const abs = Math.abs(diff);
-      const visible = abs <= 2;
-      const scale = diff === 0 ? 1 : abs === 1 ? 0.72 : 0.52;
-      const offset = diff * w * 0.62;
-      const opacity = diff === 0 ? 1 : abs === 1 ? 0.75 : abs === 2 ? 0.4 : 0;
+      const visible = abs <= 1;
+      const scale = diff === 0 ? 1 : 0.42;
+      const offset = diff * w * 0.56;
+      const opacity = diff === 0 ? 1 : abs === 1 ? 0.55 : 0;
 
       el.style.transform = `translate(-50%, -50%) translateX(${offset}px) scale(${scale})`;
       el.style.opacity = String(opacity);

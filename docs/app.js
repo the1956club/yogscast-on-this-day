@@ -17,6 +17,9 @@
 
   todayLabelEl.textContent = `On the ${ordinal(today.getDate())} of ${today.toLocaleDateString(undefined, { month: "long" })}…`;
 
+  let allEntries = [];
+  let featuredVideoId = null;
+
   try {
     const res = await fetch("data/videos-by-day.json", { cache: "no-store" });
     if (!res.ok) throw new Error(`Failed to load dataset (${res.status})`);
@@ -41,17 +44,23 @@
       return;
     }
 
-    // Pick the most-viewed video as the featured one (ties broken by most
-    // recent year). Falls back to the newest video if view counts aren't
-    // in the dataset yet.
-    const featured = [...entries].sort((a, b) => {
-      const byViews = (b.viewCount || 0) - (a.viewCount || 0);
-      return byViews !== 0 ? byViews : b.year - a.year;
-    })[0];
+    allEntries = entries;
+    featuredVideoId = pickMostViewed(entries).videoId;
+    renderCurrent();
+  }
+
+  // Re-renders the featured section + grid based on which video is
+  // currently selected as featured (featuredVideoId), without re-fetching
+  // anything. Called on first load and whenever a grid card is clicked.
+  function renderCurrent() {
+    const featured =
+      allEntries.find((v) => v.videoId === featuredVideoId) || pickMostViewed(allEntries);
+    featuredVideoId = featured.videoId;
 
     renderFeatured(featured);
 
-    const rest = entries.filter((v) => v.videoId !== featured.videoId);
+    const rest = allEntries.filter((v) => v.videoId !== featured.videoId);
+    resultsEl.innerHTML = "";
     if (rest.length > 0) {
       moreHeadingEl.hidden = false;
       const grid = document.createElement("div");
@@ -60,7 +69,18 @@
         grid.appendChild(renderCard(video));
       }
       resultsEl.appendChild(grid);
+    } else {
+      moreHeadingEl.hidden = true;
     }
+  }
+
+  // Picks the most-viewed video (ties broken by most recent year). Falls
+  // back to the newest video if view counts aren't in the dataset yet.
+  function pickMostViewed(entries) {
+    return [...entries].sort((a, b) => {
+      const byViews = (b.viewCount || 0) - (a.viewCount || 0);
+      return byViews !== 0 ? byViews : b.year - a.year;
+    })[0];
   }
 
   function renderFeatured(video) {
@@ -68,7 +88,7 @@
 
     featuredPlayerEl.innerHTML = `
       <iframe
-        src="https://www.youtube-nocookie.com/embed/${video.videoId}"
+        src="https://www.youtube-nocookie.com/embed/${video.videoId}?autoplay=1"
         title="${escapeHtml(video.title)}"
         loading="lazy"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -85,8 +105,21 @@
     const a = document.createElement("a");
     a.className = "video-card";
     a.href = `https://www.youtube.com/watch?v=${video.videoId}`;
-    a.target = "_blank";
     a.rel = "noopener noreferrer";
+
+    // Left-click plays the video right here on the page instead of
+    // navigating away. Cmd/ctrl/shift-click (or middle-click) still opens
+    // it on YouTube in a new tab, since the href is left intact.
+    a.addEventListener("click", (event) => {
+      if (event.defaultPrevented) return;
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+      }
+      event.preventDefault();
+      featuredVideoId = video.videoId;
+      renderCurrent();
+      featuredEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
 
     const publishedDate = new Date(video.publishedAt);
     const dateLabel = publishedDate.toLocaleDateString(undefined, {

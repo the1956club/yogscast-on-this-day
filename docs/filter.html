@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Custom Filter — On This Day in Yogscast History</title>
-  <meta name="description" content="Pick any date and browse the Yogscast main-channel videos uploaded on that day." />
+  <meta name="description" content="Pick any date and/or game and browse the Yogscast main-channel videos that match." />
 
   <!-- AdSense: once your site is approved, paste your AdSense loader script
        here (see README.md > "Adding AdSense"). Left out until then. -->
@@ -54,39 +54,71 @@
       </button>
     </header>
 
-    <!-- Just a date picker for now — more filters (search, tags, etc.) may
-         get added here later. No date is pre-selected, so a first-time
-         visitor sees an empty page until they pick one. There's no year
-         here at all — the calendar just loops the 12 months forever, since
-         the site only ever looks videos up by month + day. -->
+    <!-- Two independent filters that can be combined: a date (no year —
+         the calendar just loops the 12 months forever, since the site only
+         ever looks videos up by month + day) and a game (checked off a
+         multi-select list built from each video's title). Neither is
+         pre-selected, so a first-time visitor sees an empty page until they
+         choose something. Picking a game with no date browses that game
+         across every day; picking a date with no game shows that day's
+         videos; picking both narrows to videos matching both. -->
     <section class="date-filter">
-      <span class="date-filter-label" id="date-picker-label">Pick a date</span>
-      <div class="date-picker" id="date-picker">
-        <button
-          type="button"
-          class="date-picker-trigger"
-          id="date-picker-trigger"
-          aria-haspopup="true"
-          aria-expanded="false"
-          aria-labelledby="date-picker-label date-picker-value"
-        >
-          <span id="date-picker-value">Pick a date</span>
-          <svg class="date-picker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="3" y="4" width="18" height="18" rx="2"></rect>
-            <path d="M16 2v4M8 2v4M3 10h18"></path>
-          </svg>
-        </button>
+      <div class="filter-group">
+        <span class="date-filter-label" id="date-picker-label">Pick a date</span>
+        <div class="date-picker" id="date-picker">
+          <button
+            type="button"
+            class="date-picker-trigger"
+            id="date-picker-trigger"
+            aria-haspopup="true"
+            aria-expanded="false"
+            aria-labelledby="date-picker-label date-picker-value"
+          >
+            <span id="date-picker-value">Pick a date</span>
+            <svg class="date-picker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+              <path d="M16 2v4M8 2v4M3 10h18"></path>
+            </svg>
+          </button>
 
-        <div class="date-picker-panel" id="date-picker-panel" hidden>
-          <div class="date-picker-panel-header">
-            <button type="button" class="date-picker-nav" id="date-picker-prev" aria-label="Previous month">&#10094;</button>
-            <span class="date-picker-month" id="date-picker-month"></span>
-            <button type="button" class="date-picker-nav" id="date-picker-next" aria-label="Next month">&#10095;</button>
+          <div class="date-picker-panel" id="date-picker-panel" hidden>
+            <div class="date-picker-panel-header">
+              <button type="button" class="date-picker-nav" id="date-picker-prev" aria-label="Previous month">&#10094;</button>
+              <span class="date-picker-month" id="date-picker-month"></span>
+              <button type="button" class="date-picker-nav" id="date-picker-next" aria-label="Next month">&#10095;</button>
+            </div>
+            <div class="date-picker-weekdays" aria-hidden="true">
+              <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+            </div>
+            <div class="date-picker-days" id="date-picker-days"></div>
           </div>
-          <div class="date-picker-weekdays" aria-hidden="true">
-            <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <span class="date-filter-label" id="game-picker-label">Filter by game</span>
+        <div class="game-picker" id="game-picker">
+          <button
+            type="button"
+            class="date-picker-trigger"
+            id="game-picker-trigger"
+            aria-haspopup="true"
+            aria-expanded="false"
+            aria-labelledby="game-picker-label game-picker-value"
+          >
+            <span id="game-picker-value">All games</span>
+            <svg class="date-picker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 9l6 6 6-6"></path>
+            </svg>
+          </button>
+
+          <div class="game-picker-panel" id="game-picker-panel" hidden>
+            <div class="game-picker-panel-header">
+              <span class="game-picker-panel-title">Filter by game</span>
+              <button type="button" class="game-picker-clear" id="game-picker-clear">Clear</button>
+            </div>
+            <div class="game-picker-list" id="game-picker-list"></div>
           </div>
-          <div class="date-picker-days" id="date-picker-days"></div>
         </div>
       </div>
     </section>

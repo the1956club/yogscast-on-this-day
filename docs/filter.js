@@ -1,16 +1,40 @@
 (async function () {
   const statusEl = document.getElementById("status");
-  const dateInputEl = document.getElementById("date-picker");
   const resultsEl = document.getElementById("results");
   const moreHeadingEl = document.getElementById("more-heading");
   const shortsHeadingEl = document.getElementById("shorts-heading");
   const shortsResultsEl = document.getElementById("shorts-results");
+
+  const pickerEl = document.getElementById("date-picker");
+  const triggerEl = document.getElementById("date-picker-trigger");
+  const triggerValueEl = document.getElementById("date-picker-value");
+  const panelEl = document.getElementById("date-picker-panel");
+  const monthLabelEl = document.getElementById("date-picker-month");
+  const daysGridEl = document.getElementById("date-picker-days");
+  const prevMonthEl = document.getElementById("date-picker-prev");
+  const nextMonthEl = document.getElementById("date-picker-next");
+
+  const MONTH_NAMES = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+  // Only used to lay out the calendar grid (which weekday a month starts on,
+  // how many days it has) — no real year is ever tracked. 2028 is a leap
+  // year so February always gets its 29th. Hitting "next" from December (or
+  // "previous" from January) just wraps straight around.
+  const GRID_YEAR = 2028;
 
   let byDay = null;
   // The card currently showing an inline player instead of its thumbnail,
   // and the video it's playing — so a second click elsewhere can swap it
   // back to a thumbnail before playing the new one.
   let playing = null;
+
+  // The month currently shown in the open calendar panel, vs. the month/day
+  // the visitor has actually picked (null until they click a day).
+  let viewMonth = new Date().getMonth();
+  let selectedMonth = null;
+  let selectedDay = null;
 
   // No default date and nothing fetched-and-rendered up front — a first-time
   // visitor sees an empty page (just the picker) until they choose a date.
@@ -24,17 +48,98 @@
     statusEl.textContent = "Couldn't load the video data right now — try refreshing.";
   }
 
-  dateInputEl.addEventListener("change", () => {
-    if (!byDay || !dateInputEl.value) return;
-    // Parse the yyyy-mm-dd value as local time rather than UTC, so the
-    // chosen day can't shift across a timezone boundary.
-    const [y, m, d] = dateInputEl.value.split("-").map(Number);
-    loadForDate(new Date(y, m - 1, d));
+  triggerEl.addEventListener("click", () => {
+    if (panelEl.hidden) {
+      viewMonth = selectedMonth !== null ? selectedMonth : new Date().getMonth();
+      renderCalendar();
+      openPanel();
+    } else {
+      closePanel();
+    }
   });
 
-  function loadForDate(date) {
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const dd = String(date.getDate()).padStart(2, "0");
+  prevMonthEl.addEventListener("click", () => {
+    viewMonth = (viewMonth + 11) % 12;
+    renderCalendar();
+  });
+
+  nextMonthEl.addEventListener("click", () => {
+    viewMonth = (viewMonth + 1) % 12;
+    renderCalendar();
+  });
+
+  function openPanel() {
+    panelEl.hidden = false;
+    triggerEl.setAttribute("aria-expanded", "true");
+    document.addEventListener("click", onDocumentClick);
+    document.addEventListener("keydown", onDocumentKeydown);
+  }
+
+  function closePanel() {
+    panelEl.hidden = true;
+    triggerEl.setAttribute("aria-expanded", "false");
+    document.removeEventListener("click", onDocumentClick);
+    document.removeEventListener("keydown", onDocumentKeydown);
+  }
+
+  function onDocumentClick(event) {
+    if (!pickerEl.contains(event.target)) closePanel();
+  }
+
+  function onDocumentKeydown(event) {
+    if (event.key === "Escape") {
+      closePanel();
+      triggerEl.focus();
+    }
+  }
+
+  function daysInMonth(monthIndex) {
+    return new Date(GRID_YEAR, monthIndex + 1, 0).getDate();
+  }
+
+  function firstWeekday(monthIndex) {
+    return new Date(GRID_YEAR, monthIndex, 1).getDay();
+  }
+
+  // Rebuilds the calendar panel for whichever month is currently in view.
+  // Safe to call repeatedly as the visitor flicks between months.
+  function renderCalendar() {
+    monthLabelEl.textContent = MONTH_NAMES[viewMonth];
+    daysGridEl.innerHTML = "";
+
+    const leadingBlanks = firstWeekday(viewMonth);
+    for (let i = 0; i < leadingBlanks; i++) {
+      const blank = document.createElement("span");
+      blank.className = "date-picker-day date-picker-day-empty";
+      daysGridEl.appendChild(blank);
+    }
+
+    const total = daysInMonth(viewMonth);
+    for (let day = 1; day <= total; day++) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "date-picker-day";
+      btn.textContent = String(day);
+      if (selectedMonth === viewMonth && selectedDay === day) {
+        btn.classList.add("is-selected");
+      }
+      btn.addEventListener("click", () => selectDate(viewMonth, day));
+      daysGridEl.appendChild(btn);
+    }
+  }
+
+  function selectDate(month, day) {
+    selectedMonth = month;
+    selectedDay = day;
+    triggerValueEl.textContent = `${day} ${MONTH_NAMES[month]}`;
+    closePanel();
+    loadForMonthDay(month, day);
+  }
+
+  function loadForMonthDay(month, day) {
+    if (!byDay) return;
+    const mm = String(month + 1).padStart(2, "0");
+    const dd = String(day).padStart(2, "0");
     const entries = byDay[`${mm}-${dd}`] || [];
     render(entries);
   }

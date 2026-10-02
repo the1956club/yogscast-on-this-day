@@ -3,6 +3,8 @@
   const todayLabelEl = document.getElementById("today-label");
   const resultsEl = document.getElementById("results");
   const moreHeadingEl = document.getElementById("more-heading");
+  const shortsHeadingEl = document.getElementById("shorts-heading");
+  const shortsResultsEl = document.getElementById("shorts-results");
 
   const currentInfoEl = document.getElementById("current-info");
   const currentYearEl = document.getElementById("current-year");
@@ -59,43 +61,53 @@
       return;
     }
 
-    allEntries = entries;
+    // Shorts don't go in the carousel or the "Also on this day" grid above
+    // (those are for main-channel long-form uploads) — they get their own
+    // section further down instead. See renderShorts().
+    const regulars = entries.filter((v) => !v.isShort);
+    const shorts = entries.filter((v) => v.isShort);
 
-    // Build the carousel's DOM once; only positions/content get mutated
-    // afterwards so the CSS transition animates smoothly as you browse.
-    itemEls = allEntries.map((video, idx) => buildCarouselItem(video, idx));
-    itemEls.forEach((el) => carouselTrackEl.appendChild(el));
+    if (regulars.length > 0) {
+      allEntries = regulars;
 
-    carouselWrapEl.hidden = false;
-    currentInfoEl.hidden = false;
-    currentViewsEl.hidden = false;
-    currentDescEl.hidden = false;
+      // Build the carousel's DOM once; only positions/content get mutated
+      // afterwards so the CSS transition animates smoothly as you browse.
+      itemEls = allEntries.map((video, idx) => buildCarouselItem(video, idx));
+      itemEls.forEach((el) => carouselTrackEl.appendChild(el));
 
-    carouselPrevEl.addEventListener("click", () => goTo(centerIndex - 1));
-    carouselNextEl.addEventListener("click", () => goTo(centerIndex + 1));
-    carouselPrevEl.hidden = allEntries.length <= 1;
-    carouselNextEl.hidden = allEntries.length <= 1;
+      carouselWrapEl.hidden = false;
+      currentInfoEl.hidden = false;
+      currentViewsEl.hidden = false;
+      currentDescEl.hidden = false;
 
-    carouselWrapEl.tabIndex = 0;
-    carouselWrapEl.addEventListener("keydown", (event) => {
-      if (event.key === "ArrowLeft") goTo(centerIndex - 1);
-      if (event.key === "ArrowRight") goTo(centerIndex + 1);
-    });
+      carouselPrevEl.addEventListener("click", () => goTo(centerIndex - 1));
+      carouselNextEl.addEventListener("click", () => goTo(centerIndex + 1));
+      carouselPrevEl.hidden = allEntries.length <= 1;
+      carouselNextEl.hidden = allEntries.length <= 1;
 
-    setupSwipe();
-    window.addEventListener("resize", () => {
+      carouselWrapEl.tabIndex = 0;
+      carouselWrapEl.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowLeft") goTo(centerIndex - 1);
+        if (event.key === "ArrowRight") goTo(centerIndex + 1);
+      });
+
+      setupSwipe();
+      window.addEventListener("resize", () => {
+        setViewportHeight();
+        updatePositions();
+      });
+
+      const startVideo = pickMostViewed(allEntries);
+      const startIndex = allEntries.findIndex((v) => v.videoId === startVideo.videoId);
+
       setViewportHeight();
-      updatePositions();
-    });
+      // Centers the headline pick on load but does NOT auto-play it — same
+      // as browsing the carousel afterwards, you click the centered video to
+      // actually start playing it.
+      goTo(startIndex === -1 ? 0 : startIndex);
+    }
 
-    const startVideo = pickMostViewed(allEntries);
-    const startIndex = allEntries.findIndex((v) => v.videoId === startVideo.videoId);
-
-    setViewportHeight();
-    // Centers the headline pick on load but does NOT auto-play it — same
-    // as browsing the carousel afterwards, you click the centered video to
-    // actually start playing it.
-    goTo(startIndex === -1 ? 0 : startIndex);
+    renderShorts(shorts);
   }
 
   function pickMostViewed(entries) {
@@ -260,25 +272,58 @@
     resultsEl.appendChild(grid);
   }
 
-  function renderCard(video) {
+  // Shorts get their own section below "Also on this day" rather than being
+  // mixed into the carousel/grid above. Each card links straight out to the
+  // Short on YouTube — there's no carousel here to play them inline.
+  function renderShorts(shorts) {
+    shortsResultsEl.innerHTML = "";
+
+    if (shorts.length === 0) {
+      shortsHeadingEl.hidden = true;
+      return;
+    }
+
+    shortsHeadingEl.hidden = false;
+    const grid = document.createElement("div");
+    grid.className = "year-grid";
+    for (const video of shorts) {
+      grid.appendChild(
+        renderCard(video, {
+          inlinePlay: false,
+          href: `https://www.youtube.com/shorts/${video.videoId}`,
+        })
+      );
+    }
+    shortsResultsEl.appendChild(grid);
+  }
+
+  // `inlinePlay` (default true, used by the "Also on this day" grid) makes
+  // left-click center + play the video in the carousel above instead of
+  // navigating away. Shorts (see renderShorts) pass inlinePlay: false since
+  // there's no carousel to play them in, so their cards just open on
+  // YouTube like a normal link.
+  function renderCard(video, { inlinePlay = true, href } = {}) {
     const a = document.createElement("a");
     a.className = "video-card";
-    a.href = `https://www.youtube.com/watch?v=${video.videoId}`;
+    a.href = href || `https://www.youtube.com/watch?v=${video.videoId}`;
     a.rel = "noopener noreferrer";
+    if (!inlinePlay) a.target = "_blank";
 
-    // Left-click plays the video right here in the carousel instead of
-    // navigating away. Cmd/ctrl/shift-click (or middle-click) still opens
-    // it on YouTube in a new tab, since the href is left intact.
-    a.addEventListener("click", (event) => {
-      if (event.defaultPrevented) return;
-      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-        return;
-      }
-      event.preventDefault();
-      const idx = allEntries.findIndex((v) => v.videoId === video.videoId);
-      if (idx !== -1) playAt(idx);
-      carouselWrapEl.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
+    if (inlinePlay) {
+      // Left-click plays the video right here in the carousel instead of
+      // navigating away. Cmd/ctrl/shift-click (or middle-click) still opens
+      // it on YouTube in a new tab, since the href is left intact.
+      a.addEventListener("click", (event) => {
+        if (event.defaultPrevented) return;
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+          return;
+        }
+        event.preventDefault();
+        const idx = allEntries.findIndex((v) => v.videoId === video.videoId);
+        if (idx !== -1) playAt(idx);
+        carouselWrapEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
 
     const publishedDate = new Date(video.publishedAt);
     const dateLabel = publishedDate.toLocaleDateString(undefined, {

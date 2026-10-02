@@ -210,6 +210,39 @@ main {
   background: var(--accent-soft);
 }
 
+/* Date picker widget on the Custom Filter page. More filters may get added
+   alongside this later. */
+.date-filter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0 0 28px;
+  color-scheme: light dark;
+}
+
+.date-filter-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.date-filter-input {
+  font: inherit;
+  font-size: 1rem;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.date-filter-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .current-info {
   margin: 0 0 18px;
   text-align: left;

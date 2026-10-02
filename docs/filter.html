@@ -56,10 +56,39 @@
 
     <!-- Just a date picker for now — more filters (search, tags, etc.) may
          get added here later. No date is pre-selected, so a first-time
-         visitor sees an empty page until they pick one. -->
+         visitor sees an empty page until they pick one. There's no year
+         here at all — the calendar just loops the 12 months forever, since
+         the site only ever looks videos up by month + day. -->
     <section class="date-filter">
-      <label class="date-filter-label" for="date-picker">Pick a date</label>
-      <input type="date" id="date-picker" class="date-filter-input" />
+      <span class="date-filter-label" id="date-picker-label">Pick a date</span>
+      <div class="date-picker" id="date-picker">
+        <button
+          type="button"
+          class="date-picker-trigger"
+          id="date-picker-trigger"
+          aria-haspopup="true"
+          aria-expanded="false"
+          aria-labelledby="date-picker-label date-picker-value"
+        >
+          <span id="date-picker-value">Pick a date</span>
+          <svg class="date-picker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+            <path d="M16 2v4M8 2v4M3 10h18"></path>
+          </svg>
+        </button>
+
+        <div class="date-picker-panel" id="date-picker-panel" hidden>
+          <div class="date-picker-panel-header">
+            <button type="button" class="date-picker-nav" id="date-picker-prev" aria-label="Previous month">&#10094;</button>
+            <span class="date-picker-month" id="date-picker-month"></span>
+            <button type="button" class="date-picker-nav" id="date-picker-next" aria-label="Next month">&#10095;</button>
+          </div>
+          <div class="date-picker-weekdays" aria-hidden="true">
+            <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+          </div>
+          <div class="date-picker-days" id="date-picker-days"></div>
+        </div>
+      </div>
     </section>
 
     <p class="status" id="status">Loading&hellip;</p>

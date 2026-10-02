@@ -55,31 +55,16 @@
     </header>
 
     <!-- Just a date picker for now — more filters (search, tags, etc.) may
-         get added here later. -->
+         get added here later. No date is pre-selected, so a first-time
+         visitor sees an empty page until they pick one. -->
     <section class="date-filter">
       <label class="date-filter-label" for="date-picker">Pick a date</label>
       <input type="date" id="date-picker" class="date-filter-input" />
     </section>
 
-    <div class="current-info" id="current-info" hidden>
-      <p class="current-year" id="current-year"></p>
-      <h2 class="current-title" id="current-title"></h2>
-    </div>
-
     <p class="status" id="status">Loading&hellip;</p>
 
-    <section class="carousel-wrap" id="carousel-wrap" hidden>
-      <button type="button" class="carousel-arrow carousel-arrow-left" id="carousel-prev" aria-label="Previous video">&#10094;</button>
-      <div class="carousel-viewport" id="carousel-viewport">
-        <div class="carousel-track" id="carousel-track"></div>
-      </div>
-      <button type="button" class="carousel-arrow carousel-arrow-right" id="carousel-next" aria-label="Next video">&#10095;</button>
-    </section>
-
-    <p class="current-views" id="current-views" hidden></p>
-    <p class="current-desc" id="current-desc" hidden></p>
-
-    <h2 class="section-heading" id="more-heading" hidden>Also on this day</h2>
+    <h2 class="section-heading" id="more-heading" hidden>Videos on this day</h2>
     <div id="results"></div>
 
     <h2 class="section-heading" id="shorts-heading" hidden>Shorts on this day</h2>

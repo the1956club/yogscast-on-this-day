@@ -210,6 +210,11 @@ main {
   font-size: 1.1rem;
 }
 
+/* Separates the Shorts section from the "Also on this day" grid above it. */
+#shorts-heading {
+  margin-top: 40px;
+}
+
 .ad-slot {
   max-width: 900px;
   margin: 24px auto;

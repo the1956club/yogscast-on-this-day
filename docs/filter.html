@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Custom Filter — On This Day in Yogscast History</title>
+  <meta name="description" content="Pick any date and browse the Yogscast main-channel videos uploaded on that day." />
+
+  <!-- AdSense: once your site is approved, paste your AdSense loader script
+       here (see README.md > "Adding AdSense"). Left out until then. -->
+
+  <!-- Applies a saved light/dark choice before the page paints, so there's
+       no flash of the wrong theme on load. Falls back to the OS preference
+       (via the prefers-color-scheme CSS below) until the switch is used. -->
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem("theme");
+        if (stored === "light" || stored === "dark") {
+          document.documentElement.setAttribute("data-theme", stored);
+        }
+      } catch (err) {}
+    })();
+  </script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Ad slot: swap this div for your AdSense <ins> tag once approved. -->
+  <div class="ad-slot" id="ad-slot-top" aria-hidden="true"></div>
+
+  <main>
+    <img class="site-banner" src="image.png" alt="The Yogscast Nostalgia Machine (fan made)" width="1200" height="500" />
+
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav-link" href="index.html">Home</a>
+      <a class="site-nav-link" href="filter.html" aria-current="page">Custom Filter</a>
+      <a class="site-nav-link" href="about.html">About</a>
+    </nav>
+
+    <header class="page-header">
+      <p class="today-label">Choose your feed</p>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to light mode" aria-pressed="false">
+        <svg class="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+        </svg>
+        <span class="theme-toggle-track">
+          <span class="theme-toggle-thumb"></span>
+        </span>
+        <svg class="theme-toggle-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Just a date picker for now — more filters (search, tags, etc.) may
+         get added here later. -->
+    <section class="date-filter">
+      <label class="date-filter-label" for="date-picker">Pick a date</label>
+      <input type="date" id="date-picker" class="date-filter-input" />
+    </section>
+
+    <div class="current-info" id="current-info" hidden>
+      <p class="current-year" id="current-year"></p>
+      <h2 class="current-title" id="current-title"></h2>
+    </div>
+
+    <p class="status" id="status">Loading&hellip;</p>
+
+    <section class="carousel-wrap" id="carousel-wrap" hidden>
+      <button type="button" class="carousel-arrow carousel-arrow-left" id="carousel-prev" aria-label="Previous video">&#10094;</button>
+      <div class="carousel-viewport" id="carousel-viewport">
+        <div class="carousel-track" id="carousel-track"></div>
+      </div>
+      <button type="button" class="carousel-arrow carousel-arrow-right" id="carousel-next" aria-label="Next video">&#10095;</button>
+    </section>
+
+    <p class="current-views" id="current-views" hidden></p>
+    <p class="current-desc" id="current-desc" hidden></p>
+
+    <h2 class="section-heading" id="more-heading" hidden>Also on this day</h2>
+    <div id="results"></div>
+
+    <h2 class="section-heading" id="shorts-heading" hidden>Shorts on this day</h2>
+    <div id="shorts-results"></div>
+  </main>
+
+  <div class="ad-slot" id="ad-slot-bottom" aria-hidden="true"></div>
+
+  <footer class="site-footer">
+    <p>Fan-made, not affiliated with The Yogscast. Video data via the YouTube Data API.</p>
+  </footer>
+
+  <script src="theme.js"></script>
+  <script src="filter.js"></script>
+</body>
+</html>

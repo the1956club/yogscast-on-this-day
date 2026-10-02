@@ -172,14 +172,17 @@ main {
   transform: translateX(20px);
 }
 
-/* Nav bar, sat just under the page header (banner + today/about title +
-   theme toggle). Plain text links, no dropdowns — there are only a
-   couple of pages on this site. */
+/* Nav bar, sat above the page title (banner, then nav, then the
+   today/about title + theme toggle). Centered row of plain text links,
+   no dropdowns — there are only a couple of pages on this site. The
+   current page gets a filled rectangular highlight rather than just an
+   underline. */
 .site-nav {
   display: flex;
-  gap: 22px;
-  padding: 2px 0 18px;
-  margin: 0 0 20px;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 0;
+  margin: 0 0 4px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -188,18 +191,23 @@ main {
   text-decoration: none;
   font-weight: 600;
   font-size: 0.95rem;
-  padding-bottom: 6px;
-  border-bottom: 2px solid transparent;
-  transition: color 0.15s ease, border-color 0.15s ease;
+  padding: 6px 16px;
+  border-radius: 8px;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .site-nav-link:hover {
   color: var(--text);
+  background: var(--bg-elevated);
 }
 
 .site-nav-link[aria-current="page"] {
   color: var(--accent);
-  border-bottom-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.site-nav-link[aria-current="page"]:hover {
+  background: var(--accent-soft);
 }
 
 .current-info {

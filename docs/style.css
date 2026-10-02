@@ -72,7 +72,7 @@ main {
 .site-banner {
   display: block;
   width: 100%;
-  max-width: 420px;
+  max-width: 900px;
   height: auto;
   margin: 28px auto 0;
   /* Default (and OS dark preference) is the dark theme, so invert by

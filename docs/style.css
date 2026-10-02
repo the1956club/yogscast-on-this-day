@@ -21,6 +21,30 @@
   }
 }
 
+/* Explicit overrides set by the theme switch (see #theme-toggle in app.js).
+   These win over the OS-preference query above regardless of the visitor's
+   system setting, since they're declared after it and apply unconditionally
+   whenever data-theme is present on <html>. */
+:root[data-theme="dark"] {
+  --bg: #0f1420;
+  --bg-elevated: #171f30;
+  --text: #eef1f7;
+  --text-muted: #9aa5b8;
+  --accent: #5fb0ff;
+  --accent-soft: #223349;
+  --border: #26314a;
+}
+
+:root[data-theme="light"] {
+  --bg: #f6f7fb;
+  --bg-elevated: #ffffff;
+  --text: #161a22;
+  --text-muted: #5b6472;
+  --accent: #1a73c7;
+  --accent-soft: #e4f0fd;
+  --border: #dde2ec;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -33,6 +57,7 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   line-height: 1.5;
   overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 main {
@@ -41,6 +66,11 @@ main {
 }
 
 .page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 16px;
   padding: 32px 0 4px;
   text-align: left;
 }
@@ -49,6 +79,59 @@ main {
   margin: 0;
   font-weight: 700;
   font-size: clamp(1.4rem, 4vw, 2rem);
+}
+
+/* Light/dark switch */
+
+.theme-toggle {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 4px;
+  margin: 0;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.theme-toggle-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.theme-toggle-track {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.theme-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  transition: transform 0.2s ease;
+}
+
+.theme-toggle[aria-pressed="true"] .theme-toggle-track {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.theme-toggle[aria-pressed="true"] .theme-toggle-thumb {
+  transform: translateX(20px);
 }
 
 .current-info {

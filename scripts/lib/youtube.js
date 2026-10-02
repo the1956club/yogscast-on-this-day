@@ -24,7 +24,7 @@ async function getUploadsPlaylistId(channelId, apiKey) {
     "channels",
     { part: "contentDetails", id: channelId },
     apiKey
-    );
+  );
   const item = data.items && data.items[0];
   if (!item) throw new Error(`No channel found for ID ${channelId}`);
   return item.contentDetails.relatedPlaylists.uploads;
@@ -43,36 +43,56 @@ async function getPlaylistPage(playlistId, pageToken, apiKey) {
       pageToken,
     },
     apiKey
-    );
+  );
 
-const videos = (data.items || [])
-  .filter((item) => item.contentDetails && item.contentDetails.videoPublishedAt)
-  .map((item) => ({
-    videoId: item.contentDetails.videoId,
-    title: item.snippet.title,
-    description: item.snippet.description || "",
-    publishedAt: item.contentDetails.videoPublishedAt, // ISO 8601, real publish date
-  }));
+  const videos = (data.items || [])
+    .filter((item) => item.contentDetails && item.contentDetails.videoPublishedAt)
+    .map((item) => ({
+      videoId: item.contentDetails.videoId,
+      title: item.snippet.title,
+      description: item.snippet.description || "",
+      publishedAt: item.contentDetails.videoPublishedAt, // ISO 8601, real publish date
+    }));
 
-return { videos, nextPageToken: data.nextPageToken };
+  return { videos, nextPageToken: data.nextPageToken };
 }
 
-// Fetches view counts for a list of video IDs, 50 at a time (the API max
-// per call). Returns a Map of videoId -> viewCount (number).
-async function getViewCounts(videoIds, apiKey) {
-  const counts = new Map();
+// Converts an ISO 8601 duration ("PT1H2M3S", "PT47S", etc.) into seconds.
+function parseDurationToSeconds(iso) {
+  const match = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(iso || "");
+  if (!match) return 0;
+  const hours = parseInt(match[1] || "0", 10);
+  const minutes = parseInt(match[2] || "0", 10);
+  const seconds = parseInt(match[3] || "0", 10);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+// Fetches view counts + duration for a list of video IDs, 50 at a time (the
+// API max per call). Returns a Map of videoId -> { viewCount, durationSeconds, isShort }.
+//
+// The YouTube Data API has no direct "is this a Short" flag, so this uses
+// the common community heuristic: a duration of 60 seconds or less. (YouTube
+// has since allowed some Shorts up to 3 minutes, so a handful of longer
+// Shorts may be missed, but anything at or under 60s is reliably a Short.)
+async function getVideoDetails(videoIds, apiKey) {
+  const details = new Map();
   for (let i = 0; i < videoIds.length; i += 50) {
     const batch = videoIds.slice(i, i + 50);
     const data = await apiGet(
       "videos",
-      { part: "statistics", id: batch.join(",") },
+      { part: "statistics,contentDetails", id: batch.join(",") },
       apiKey
-      );
+    );
     for (const item of data.items || []) {
-      counts.set(item.id, Number(item.statistics?.viewCount || 0));
+      const durationSeconds = parseDurationToSeconds(item.contentDetails?.duration);
+      details.set(item.id, {
+        viewCount: Number(item.statistics?.viewCount || 0),
+        durationSeconds,
+        isShort: durationSeconds > 0 && durationSeconds <= 60,
+      });
     }
   }
-  return counts;
+  return details;
 }
 
-module.exports = { getUploadsPlaylistId, getPlaylistPage, getViewCounts };
+module.exports = { getUploadsPlaylistId, getPlaylistPage, getVideoDetails };

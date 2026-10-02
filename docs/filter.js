@@ -5,14 +5,23 @@
   const shortsHeadingEl = document.getElementById("shorts-heading");
   const shortsResultsEl = document.getElementById("shorts-results");
 
-  const pickerEl = document.getElementById("date-picker");
-  const triggerEl = document.getElementById("date-picker-trigger");
-  const triggerValueEl = document.getElementById("date-picker-value");
-  const panelEl = document.getElementById("date-picker-panel");
+  // --- Date picker elements ---
+  const datePickerEl = document.getElementById("date-picker");
+  const dateTriggerEl = document.getElementById("date-picker-trigger");
+  const dateTriggerValueEl = document.getElementById("date-picker-value");
+  const datePanelEl = document.getElementById("date-picker-panel");
   const monthLabelEl = document.getElementById("date-picker-month");
   const daysGridEl = document.getElementById("date-picker-days");
   const prevMonthEl = document.getElementById("date-picker-prev");
   const nextMonthEl = document.getElementById("date-picker-next");
+
+  // --- Game picker elements ---
+  const gamePickerEl = document.getElementById("game-picker");
+  const gameTriggerEl = document.getElementById("game-picker-trigger");
+  const gameTriggerValueEl = document.getElementById("game-picker-value");
+  const gamePanelEl = document.getElementById("game-picker-panel");
+  const gameListEl = document.getElementById("game-picker-list");
+  const gameClearEl = document.getElementById("game-picker-clear");
 
   const MONTH_NAMES = [
     "January", "February", "March", "April", "May", "June",
@@ -25,6 +34,9 @@
   const GRID_YEAR = 2028;
 
   let byDay = null;
+  // Every video across every day, flattened once up front so the "by game"
+  // filter can browse across all dates, not just one day at a time.
+  let allVideos = [];
   // The card currently showing an inline player instead of its thumbnail,
   // and the video it's playing — so a second click elsewhere can swap it
   // back to a thumbnail before playing the new one.
@@ -36,26 +48,88 @@
   let selectedMonth = null;
   let selectedDay = null;
 
-  // No default date and nothing fetched-and-rendered up front — a first-time
-  // visitor sees an empty page (just the picker) until they choose a date.
+  // Games the visitor has ticked in the game picker. Empty = no game filter.
+  const selectedGames = new Set();
+
+  // Only one popover (date or game) open at a time.
+  let openPopover = null; // { panelEl, triggerEl }
+
+  // No default date/game and nothing fetched-and-rendered up front — a
+  // first-time visitor sees an empty page (just the pickers) until they
+  // choose something.
   try {
     const res = await fetch("data/videos-by-day.json", { cache: "no-store" });
     if (!res.ok) throw new Error(`Failed to load dataset (${res.status})`);
     byDay = await res.json();
-    statusEl.textContent = "Pick a date above to see what was uploaded that day.";
+    for (const entries of Object.values(byDay)) {
+      for (const video of entries) allVideos.push(video);
+    }
+    // Newest first, so browsing a game with no date picked reads like a feed.
+    allVideos.sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1));
+
+    buildGameList();
+    showEmptyState();
   } catch (err) {
     console.error(err);
     statusEl.textContent = "Couldn't load the video data right now — try refreshing.";
   }
 
-  triggerEl.addEventListener("click", () => {
-    if (panelEl.hidden) {
-      viewMonth = selectedMonth !== null ? selectedMonth : new Date().getMonth();
-      renderCalendar();
-      openPanel();
-    } else {
-      closePanel();
+  // ---------------------------------------------------------------------
+  // Popover plumbing shared by the date picker and the game picker — only
+  // one of the two panels is ever open at once.
+  // ---------------------------------------------------------------------
+
+  function openPopoverFor(panelEl, triggerEl) {
+    if (openPopover && openPopover.panelEl !== panelEl) closePopover();
+    panelEl.hidden = false;
+    triggerEl.setAttribute("aria-expanded", "true");
+    if (!openPopover) {
+      document.addEventListener("click", onDocumentClick);
+      document.addEventListener("keydown", onDocumentKeydown);
     }
+    openPopover = { panelEl, triggerEl };
+  }
+
+  function closePopover() {
+    if (!openPopover) return;
+    const { panelEl, triggerEl } = openPopover;
+    panelEl.hidden = true;
+    triggerEl.setAttribute("aria-expanded", "false");
+    document.removeEventListener("click", onDocumentClick);
+    document.removeEventListener("keydown", onDocumentKeydown);
+    openPopover = null;
+  }
+
+  function onDocumentClick(event) {
+    if (!openPopover) return;
+    if (
+      !datePickerEl.contains(event.target) &&
+      !gamePickerEl.contains(event.target)
+    ) {
+      closePopover();
+    }
+  }
+
+  function onDocumentKeydown(event) {
+    if (event.key === "Escape" && openPopover) {
+      const { triggerEl } = openPopover;
+      closePopover();
+      triggerEl.focus();
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Date picker
+  // ---------------------------------------------------------------------
+
+  dateTriggerEl.addEventListener("click", () => {
+    if (openPopover && openPopover.panelEl === datePanelEl) {
+      closePopover();
+      return;
+    }
+    viewMonth = selectedMonth !== null ? selectedMonth : new Date().getMonth();
+    renderCalendar();
+    openPopoverFor(datePanelEl, dateTriggerEl);
   });
 
   prevMonthEl.addEventListener("click", () => {
@@ -67,31 +141,6 @@
     viewMonth = (viewMonth + 1) % 12;
     renderCalendar();
   });
-
-  function openPanel() {
-    panelEl.hidden = false;
-    triggerEl.setAttribute("aria-expanded", "true");
-    document.addEventListener("click", onDocumentClick);
-    document.addEventListener("keydown", onDocumentKeydown);
-  }
-
-  function closePanel() {
-    panelEl.hidden = true;
-    triggerEl.setAttribute("aria-expanded", "false");
-    document.removeEventListener("click", onDocumentClick);
-    document.removeEventListener("keydown", onDocumentKeydown);
-  }
-
-  function onDocumentClick(event) {
-    if (!pickerEl.contains(event.target)) closePanel();
-  }
-
-  function onDocumentKeydown(event) {
-    if (event.key === "Escape") {
-      closePanel();
-      triggerEl.focus();
-    }
-  }
 
   function daysInMonth(monthIndex) {
     return new Date(GRID_YEAR, monthIndex + 1, 0).getDate();
@@ -131,22 +180,132 @@
   function selectDate(month, day) {
     selectedMonth = month;
     selectedDay = day;
-    triggerValueEl.textContent = `${day} ${MONTH_NAMES[month]}`;
-    closePanel();
-    loadForMonthDay(month, day);
+    dateTriggerValueEl.textContent = `${day} ${MONTH_NAMES[month]}`;
+    closePopover();
+    updateResults();
   }
 
-  function loadForMonthDay(month, day) {
-    if (!byDay) return;
-    const mm = String(month + 1).padStart(2, "0");
-    const dd = String(day).padStart(2, "0");
-    const entries = byDay[`${mm}-${dd}`] || [];
-    render(entries);
+  // ---------------------------------------------------------------------
+  // Game picker
+  // ---------------------------------------------------------------------
+
+  function buildGameList() {
+    const counts = new Map();
+    for (const video of allVideos) {
+      for (const game of video.games || []) {
+        counts.set(game, (counts.get(game) || 0) + 1);
+      }
+    }
+
+    const names = [...counts.keys()].sort((a, b) => a.localeCompare(b));
+    // "Other" is a catch-all, not a real game — keep it out of the way at
+    // the end of the list rather than wherever it happens to sort.
+    const otherIndex = names.indexOf("Other");
+    if (otherIndex !== -1) {
+      names.splice(otherIndex, 1);
+      names.push("Other");
+    }
+
+    gameListEl.innerHTML = "";
+    for (const name of names) {
+      const label = document.createElement("label");
+      label.className = "game-picker-option";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = name;
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) selectedGames.add(name);
+        else selectedGames.delete(name);
+        updateGameTriggerLabel();
+        updateResults();
+      });
+
+      const text = document.createElement("span");
+      text.textContent = `${name} (${counts.get(name)})`;
+
+      label.appendChild(checkbox);
+      label.appendChild(text);
+      gameListEl.appendChild(label);
+    }
   }
 
-  // Clears whatever was on screen for the previous date, then builds the
-  // grid(s) for the new one. Safe to call repeatedly as the picker changes.
-  function render(entries) {
+  gameTriggerEl.addEventListener("click", () => {
+    if (openPopover && openPopover.panelEl === gamePanelEl) {
+      closePopover();
+      return;
+    }
+    openPopoverFor(gamePanelEl, gameTriggerEl);
+  });
+
+  gameClearEl.addEventListener("click", () => {
+    selectedGames.clear();
+    for (const checkbox of gameListEl.querySelectorAll("input[type=checkbox]")) {
+      checkbox.checked = false;
+    }
+    updateGameTriggerLabel();
+    updateResults();
+  });
+
+  function updateGameTriggerLabel() {
+    if (selectedGames.size === 0) {
+      gameTriggerValueEl.textContent = "All games";
+    } else if (selectedGames.size === 1) {
+      gameTriggerValueEl.textContent = [...selectedGames][0];
+    } else {
+      gameTriggerValueEl.textContent = `${selectedGames.size} games selected`;
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Combined filtering — a date, a set of games, both, or neither.
+  // ---------------------------------------------------------------------
+
+  function matchesSelectedGames(video) {
+    if (selectedGames.size === 0) return true;
+    return (video.games || []).some((g) => selectedGames.has(g));
+  }
+
+  function updateResults() {
+    const hasDate = selectedMonth !== null && selectedDay !== null;
+    const hasGames = selectedGames.size > 0;
+
+    if (!hasDate && !hasGames) {
+      showEmptyState();
+      return;
+    }
+
+    let entries;
+    let mode;
+    if (hasDate) {
+      const mm = String(selectedMonth + 1).padStart(2, "0");
+      const dd = String(selectedDay).padStart(2, "0");
+      entries = (byDay[`${mm}-${dd}`] || []).filter(matchesSelectedGames);
+      mode = "date";
+    } else {
+      entries = allVideos.filter(matchesSelectedGames);
+      mode = "game";
+    }
+
+    render(entries, mode);
+  }
+
+  function showEmptyState() {
+    playing = null;
+    statusEl.hidden = false;
+    statusEl.textContent = "Pick a date or a game above to see what was uploaded.";
+    moreHeadingEl.hidden = true;
+    shortsHeadingEl.hidden = true;
+    resultsEl.innerHTML = "";
+    shortsResultsEl.innerHTML = "";
+  }
+
+  // Clears whatever was on screen for the previous selection, then builds
+  // the grid(s) for the new one. Safe to call repeatedly as the pickers
+  // change. `mode` is "date" (a specific day, maybe also game-filtered) or
+  // "game" (every day, filtered to the chosen game(s)) — it only changes
+  // the section headings.
+  function render(entries, mode) {
     playing = null;
 
     moreHeadingEl.hidden = true;
@@ -158,7 +317,9 @@
     if (entries.length === 0) {
       statusEl.hidden = false;
       statusEl.textContent =
-        "No Yogscast main-channel videos were uploaded on this date — try another day.";
+        mode === "date"
+          ? "No Yogscast main-channel videos match this date — try another day or game."
+          : "No Yogscast main-channel videos match this game — try another one.";
       return;
     }
 
@@ -169,6 +330,8 @@
 
     if (regulars.length > 0) {
       moreHeadingEl.hidden = false;
+      moreHeadingEl.textContent =
+        mode === "date" ? "Videos on this day" : "Matching videos";
       const grid = document.createElement("div");
       grid.className = "year-grid";
       for (const video of regulars) {
@@ -177,13 +340,13 @@
       resultsEl.appendChild(grid);
     }
 
-    renderShorts(shorts);
+    renderShorts(shorts, mode);
   }
 
   // Shorts get their own section below the main grid. Each card links
   // straight out to the Short on YouTube — there's no inline player for
   // them here.
-  function renderShorts(shorts) {
+  function renderShorts(shorts, mode) {
     shortsResultsEl.innerHTML = "";
 
     if (shorts.length === 0) {
@@ -192,6 +355,8 @@
     }
 
     shortsHeadingEl.hidden = false;
+    shortsHeadingEl.textContent =
+      mode === "date" ? "Shorts on this day" : "Matching shorts";
     const grid = document.createElement("div");
     grid.className = "year-grid";
     for (const video of shorts) {

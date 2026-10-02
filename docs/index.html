@@ -9,6 +9,20 @@
   <!-- AdSense: once your site is approved, paste your AdSense loader script
        here (see README.md > "Adding AdSense"). Left out until then. -->
 
+  <!-- Applies a saved light/dark choice before the page paints, so there's
+       no flash of the wrong theme on load. Falls back to the OS preference
+       (via the prefers-color-scheme CSS below) until the switch is used. -->
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem("theme");
+        if (stored === "light" || stored === "dark") {
+          document.documentElement.setAttribute("data-theme", stored);
+        }
+      } catch (err) {}
+    })();
+  </script>
+
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -18,6 +32,18 @@
   <main>
     <header class="page-header">
       <p class="today-label" id="today-label">On the &hellip;</p>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to light mode" aria-pressed="false">
+        <svg class="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+        </svg>
+        <span class="theme-toggle-track">
+          <span class="theme-toggle-thumb"></span>
+        </span>
+        <svg class="theme-toggle-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
+        </svg>
+      </button>
     </header>
 
     <div class="current-info" id="current-info" hidden>

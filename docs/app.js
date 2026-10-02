@@ -5,7 +5,9 @@
   const moreHeadingEl = document.getElementById("more-heading");
 
   const currentInfoEl = document.getElementById("current-info");
+  const currentYearEl = document.getElementById("current-year");
   const currentTitleEl = document.getElementById("current-title");
+  const currentViewsEl = document.getElementById("current-views");
   const currentDescEl = document.getElementById("current-desc");
 
   const carouselWrapEl = document.getElementById("carousel-wrap");
@@ -64,6 +66,7 @@
 
     carouselWrapEl.hidden = false;
     currentInfoEl.hidden = false;
+    currentViewsEl.hidden = false;
     currentDescEl.hidden = false;
 
     carouselPrevEl.addEventListener("click", () => goTo(centerIndex - 1));
@@ -210,7 +213,9 @@
 
   function updateCurrentInfo() {
     const video = allEntries[centerIndex];
+    currentYearEl.textContent = video.year;
     currentTitleEl.textContent = video.title;
+    currentViewsEl.textContent = `${formatViewCount(video.viewCount)} views`;
     currentDescEl.textContent = firstLine(video.description);
   }
 
@@ -311,6 +316,10 @@
     if (!description) return "";
     const line = description.split(/\r?\n/).find((l) => l.trim().length > 0);
     return line ? line.trim() : "";
+  }
+
+  function formatViewCount(viewCount) {
+    return (viewCount || 0).toLocaleString();
   }
 
   function escapeHtml(str) {

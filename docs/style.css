@@ -172,6 +172,36 @@ main {
   transform: translateX(20px);
 }
 
+/* Nav bar, sat just under the page header (banner + today/about title +
+   theme toggle). Plain text links, no dropdowns — there are only a
+   couple of pages on this site. */
+.site-nav {
+  display: flex;
+  gap: 22px;
+  padding: 2px 0 18px;
+  margin: 0 0 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.site-nav-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding-bottom: 6px;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.site-nav-link:hover {
+  color: var(--text);
+}
+
+.site-nav-link[aria-current="page"] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
 .current-info {
   margin: 0 0 18px;
   text-align: left;
@@ -428,4 +458,34 @@ main {
   text-align: center;
   color: var(--text-muted);
   font-size: 0.8rem;
+}
+
+/* About page prose */
+
+.page-title {
+  margin: 4px 0 24px;
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  font-weight: 700;
+}
+
+.about-content {
+  padding-bottom: 24px;
+}
+
+.about-content h2 {
+  font-size: 1.15rem;
+  margin: 32px 0 10px;
+}
+
+.about-content h2:first-child {
+  margin-top: 0;
+}
+
+.about-content p {
+  margin: 0 0 14px;
+  color: var(--text-muted);
+}
+
+.about-content a {
+  color: var(--accent);
 }

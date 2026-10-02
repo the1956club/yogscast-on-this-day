@@ -65,13 +65,42 @@ main {
   margin: 0 auto;
 }
 
+/* Banner. The artwork is black line art on a transparent background, so it
+   reads fine as-is on the light theme; on dark it's flipped to white with
+   a CSS filter rather than needing a second image. */
+
+.site-banner {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  margin: 28px auto 0;
+  /* Default (and OS dark preference) is the dark theme, so invert by
+     default to get white line art; un-invert for light. */
+  filter: invert(1);
+}
+
+@media (prefers-color-scheme: light) {
+  .site-banner {
+    filter: none;
+  }
+}
+
+:root[data-theme="light"] .site-banner {
+  filter: none;
+}
+
+:root[data-theme="dark"] .site-banner {
+  filter: invert(1);
+}
+
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px 16px;
-  padding: 32px 0 4px;
+  padding: 20px 0 4px;
   text-align: left;
 }
 

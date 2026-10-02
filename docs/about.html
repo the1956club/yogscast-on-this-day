@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>About — On This Day in Yogscast History</title>
+  <meta name="description" content="What this site is, how it works, and where the video data comes from." />
+
+  <!-- AdSense: once your site is approved, paste your AdSense loader script
+       here (see README.md > "Adding AdSense"). Left out until then. -->
+
+  <!-- Applies a saved light/dark choice before the page paints, so there's
+       no flash of the wrong theme on load. Falls back to the OS preference
+       (via the prefers-color-scheme CSS below) until the switch is used. -->
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem("theme");
+        if (stored === "light" || stored === "dark") {
+          document.documentElement.setAttribute("data-theme", stored);
+        }
+      } catch (err) {}
+    })();
+  </script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Ad slot: swap this div for your AdSense <ins> tag once approved. -->
+  <div class="ad-slot" id="ad-slot-top" aria-hidden="true"></div>
+
+  <main>
+    <img class="site-banner" src="image.png" alt="The Yogscast Nostalgia Machine (fan made)" width="1200" height="500" />
+
+    <header class="page-header">
+      <p class="today-label">About</p>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to light mode" aria-pressed="false">
+        <svg class="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+        </svg>
+        <span class="theme-toggle-track">
+          <span class="theme-toggle-thumb"></span>
+        </span>
+        <svg class="theme-toggle-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
+        </svg>
+      </button>
+    </header>
+
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-nav-link" href="index.html">Home</a>
+      <a class="site-nav-link" href="about.html" aria-current="page">About</a>
+    </nav>
+
+    <div class="about-content">
+      <h2>What this is</h2>
+      <p>
+        On This Day in Yogscast History is a fan-made site. Load it on any
+        date and it shows every main-channel Yogscast video uploaded on
+        that exact day of the year, going all the way back through the
+        channel's history &mdash; whatever year it happened to be. Check
+        back tomorrow and it's a different set of videos entirely.
+      </p>
+
+      <h2>Where the data comes from</h2>
+      <p>
+        Every video's title, description, view count, upload date and
+        duration is pulled from the official YouTube Data API, using the
+        Yogscast's public uploads. A small automated job checks for new
+        uploads once a day, so the site should pick up new videos without
+        anyone having to do anything by hand.
+      </p>
+
+      <h2>Shorts</h2>
+      <p>
+        YouTube Shorts uploaded on today's date get their own
+        &ldquo;Shorts on this day&rdquo; section further down the home
+        page, separate from the main carousel and grid above it, since
+        they're a different kind of video to browse.
+      </p>
+
+      <h2>Not affiliated with The Yogscast</h2>
+      <p>
+        This is an independent fan project, built for fun, and isn't run
+        by or officially connected to The Yogscast in any way. All video
+        titles, thumbnails and content remain the property of their
+        original creators &mdash; this site just links out to them on
+        YouTube.
+      </p>
+
+      <h2>Ads</h2>
+      <p>
+        This site doesn't run any ads at the moment. If that changes down
+        the line, this page will be updated to say so.
+      </p>
+    </div>
+  </main>
+
+  <div class="ad-slot" id="ad-slot-bottom" aria-hidden="true"></div>
+
+  <footer class="site-footer">
+    <p>Fan-made, not affiliated with The Yogscast. Video data via the YouTube Data API.</p>
+  </footer>
+
+  <script src="theme.js"></script>
+</body>
+</html>

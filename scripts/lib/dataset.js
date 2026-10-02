@@ -17,46 +17,47 @@ function loadAllVideos() {
 function buildByDayIndex(allVideos) {
   const byDay = {};
 
-for (const v of allVideos) {
-  const d = new Date(v.publishedAt);
-  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(d.getUTCDate()).padStart(2, "0");
-  const key = `${mm}-${dd}`;
+  for (const v of allVideos) {
+    const d = new Date(v.publishedAt);
+    const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(d.getUTCDate()).padStart(2, "0");
+    const key = `${mm}-${dd}`;
 
-  if (!byDay[key]) byDay[key] = [];
-  byDay[key].push({
-    videoId: v.videoId,
-    title: v.title,
-    description: v.description || "",
-    viewCount: v.viewCount || 0,
-    year: d.getUTCFullYear(),
-    publishedAt: v.publishedAt,
-  });
-}
+    if (!byDay[key]) byDay[key] = [];
+    byDay[key].push({
+      videoId: v.videoId,
+      title: v.title,
+      description: v.description || "",
+      viewCount: v.viewCount || 0,
+      year: d.getUTCFullYear(),
+      publishedAt: v.publishedAt,
+      isShort: !!v.isShort,
+    });
+  }
 
-for (const key of Object.keys(byDay)) {
-  byDay[key].sort((a, b) => b.year - a.year);
-}
+  for (const key of Object.keys(byDay)) {
+    byDay[key].sort((a, b) => b.year - a.year);
+  }
 
-return byDay;
+  return byDay;
 }
 
 function saveAll(allVideos) {
   // De-dupe by videoId and sort newest-first, just to keep the file tidy
-// and deterministic between runs.
-const seen = new Map();
+  // and deterministic between runs.
+  const seen = new Map();
   for (const v of allVideos) seen.set(v.videoId, v);
   const deduped = [...seen.values()].sort(
     (a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)
-    );
+  );
 
-fs.mkdirSync(path.dirname(ALL_VIDEOS_PATH), { recursive: true });
+  fs.mkdirSync(path.dirname(ALL_VIDEOS_PATH), { recursive: true });
   fs.writeFileSync(ALL_VIDEOS_PATH, JSON.stringify(deduped, null, 2));
 
-const byDay = buildByDayIndex(deduped);
+  const byDay = buildByDayIndex(deduped);
   fs.writeFileSync(BY_DAY_PATH, JSON.stringify(byDay));
 
-return { total: deduped.length, days: Object.keys(byDay).length };
+  return { total: deduped.length, days: Object.keys(byDay).length };
 }
 
 module.exports = { loadAllVideos, saveAll, ALL_VIDEOS_PATH, BY_DAY_PATH };

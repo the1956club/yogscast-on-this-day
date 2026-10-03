@@ -21,14 +21,6 @@
   const prevMonthEl = document.getElementById("date-picker-prev");
   const nextMonthEl = document.getElementById("date-picker-next");
 
-  // --- Game picker elements ---
-  const gamePickerEl = document.getElementById("game-picker");
-  const gameTriggerEl = document.getElementById("game-picker-trigger");
-  const gameTriggerValueEl = document.getElementById("game-picker-value");
-  const gamePanelEl = document.getElementById("game-picker-panel");
-  const gameListEl = document.getElementById("game-picker-list");
-  const gameClearEl = document.getElementById("game-picker-clear");
-
   const MONTH_NAMES = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December",
@@ -40,8 +32,8 @@
   const GRID_YEAR = 2028;
 
   let byDay = null;
-  // Every video across every day, flattened once up front so the "by game"
-  // filter can browse across all dates, not just one day at a time.
+  // Every video across every day, flattened once up front so the game and
+  // series filters can browse across all dates, not just one day at a time.
   let allVideos = [];
   // The video currently loaded in the single top player, if any (not a
   // per-card thing — every card stays a thumbnail; clicking any of them
@@ -54,14 +46,32 @@
   let selectedMonth = null;
   let selectedDay = null;
 
-  // Games the visitor has ticked in the game picker. Empty = no game filter.
-  const selectedGames = new Set();
-
-  // Only one popover (date or game) open at a time.
+  // Only one popover (date, game or series) open at a time.
   let openPopover = null; // { panelEl, triggerEl }
 
-  // No default date/game and nothing fetched-and-rendered up front — a
-  // first-time visitor sees an empty page (just the pickers) until they
+  // The two tick-box pickers. Each reads one array field off every video
+  // ("games" / "series", added by the data pipeline — see
+  // scripts/lib/tags.js) and keeps its own set of ticked names.
+  const gamePicker = createMultiPicker({
+    id: "game-picker",
+    field: "games",
+    noneLabel: "All games",
+    pluralNoun: "games",
+  });
+  const seriesPicker = createMultiPicker({
+    id: "series-picker",
+    field: "series",
+    noneLabel: "All series",
+    pluralNoun: "series",
+  });
+  const pickerRoots = [
+    datePickerEl,
+    gamePicker.rootEl,
+    seriesPicker.rootEl,
+  ];
+
+  // No default date/game/series and nothing fetched-and-rendered up front —
+  // a first-time visitor sees an empty page (just the pickers) until they
   // choose something.
   try {
     const res = await fetch("data/videos-by-day.json", { cache: "no-store" });
@@ -73,7 +83,8 @@
     // Newest first, so browsing a game with no date picked reads like a feed.
     allVideos.sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1));
 
-    buildGameList();
+    gamePicker.build();
+    seriesPicker.build();
     showEmptyState();
   } catch (err) {
     console.error(err);
@@ -81,13 +92,19 @@
   }
 
   // ---------------------------------------------------------------------
-  // Popover plumbing shared by the date picker and the game picker — only
-  // one of the two panels is ever open at once.
+  // Popover plumbing shared by all three pickers — only one panel is ever
+  // open at once.
   // ---------------------------------------------------------------------
 
   function openPopoverFor(panelEl, triggerEl) {
     if (openPopover && openPopover.panelEl !== panelEl) closePopover();
     panelEl.hidden = false;
+    // Panels hang off the left edge of their trigger; nudge one back left if
+    // that would push it off the right side of the screen (mostly the
+    // series picker, which sits furthest right).
+    panelEl.style.left = "";
+    const overflow = panelEl.getBoundingClientRect().right - (window.innerWidth - 16);
+    if (overflow > 0) panelEl.style.left = `${-overflow}px`;
     triggerEl.setAttribute("aria-expanded", "true");
     if (!openPopover) {
       document.addEventListener("click", onDocumentClick);
@@ -108,10 +125,7 @@
 
   function onDocumentClick(event) {
     if (!openPopover) return;
-    if (
-      !datePickerEl.contains(event.target) &&
-      !gamePickerEl.contains(event.target)
-    ) {
+    if (!pickerRoots.some((el) => el.contains(event.target))) {
       closePopover();
     }
   }
@@ -192,91 +206,111 @@
   }
 
   // ---------------------------------------------------------------------
-  // Game picker
+  // Tick-box pickers (games and series). Same markup and behaviour for both:
+  // a trigger button that opens a multi-column checklist of every name that
+  // appears in `field` across the dataset, with a count beside each.
   // ---------------------------------------------------------------------
 
-  function buildGameList() {
-    const counts = new Map();
-    for (const video of allVideos) {
-      for (const game of video.games || []) {
-        counts.set(game, (counts.get(game) || 0) + 1);
+  function createMultiPicker({ id, field, noneLabel, pluralNoun }) {
+    const rootEl = document.getElementById(id);
+    const triggerEl = document.getElementById(`${id}-trigger`);
+    const valueEl = document.getElementById(`${id}-value`);
+    const panelEl = document.getElementById(`${id}-panel`);
+    const listEl = document.getElementById(`${id}-list`);
+    const clearEl = document.getElementById(`${id}-clear`);
+    const selected = new Set();
+
+    function build() {
+      const counts = new Map();
+      for (const video of allVideos) {
+        for (const name of video[field] || []) {
+          counts.set(name, (counts.get(name) || 0) + 1);
+        }
+      }
+
+      const names = [...counts.keys()].sort((a, b) => a.localeCompare(b));
+      // "Other" is a catch-all, not a real game — keep it out of the way at
+      // the end of the list rather than wherever it happens to sort.
+      const otherIndex = names.indexOf("Other");
+      if (otherIndex !== -1) {
+        names.splice(otherIndex, 1);
+        names.push("Other");
+      }
+
+      listEl.innerHTML = "";
+      for (const name of names) {
+        const label = document.createElement("label");
+        label.className = "game-picker-option";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = name;
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) selected.add(name);
+          else selected.delete(name);
+          updateLabel();
+          updateResults();
+        });
+
+        const text = document.createElement("span");
+        text.textContent = `${name} (${counts.get(name)})`;
+
+        label.appendChild(checkbox);
+        label.appendChild(text);
+        listEl.appendChild(label);
       }
     }
 
-    const names = [...counts.keys()].sort((a, b) => a.localeCompare(b));
-    // "Other" is a catch-all, not a real game — keep it out of the way at
-    // the end of the list rather than wherever it happens to sort.
-    const otherIndex = names.indexOf("Other");
-    if (otherIndex !== -1) {
-      names.splice(otherIndex, 1);
-      names.push("Other");
+    function updateLabel() {
+      if (selected.size === 0) {
+        valueEl.textContent = noneLabel;
+      } else if (selected.size === 1) {
+        valueEl.textContent = [...selected][0];
+      } else {
+        valueEl.textContent = `${selected.size} ${pluralNoun} selected`;
+      }
     }
 
-    gameListEl.innerHTML = "";
-    for (const name of names) {
-      const label = document.createElement("label");
-      label.className = "game-picker-option";
-
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.value = name;
-      checkbox.addEventListener("change", () => {
-        if (checkbox.checked) selectedGames.add(name);
-        else selectedGames.delete(name);
-        updateGameTriggerLabel();
-        updateResults();
-      });
-
-      const text = document.createElement("span");
-      text.textContent = `${name} (${counts.get(name)})`;
-
-      label.appendChild(checkbox);
-      label.appendChild(text);
-      gameListEl.appendChild(label);
+    // Ticking several names within one picker widens the net (any of them);
+    // the date and the other picker then narrow it down further.
+    function matches(video) {
+      if (selected.size === 0) return true;
+      return (video[field] || []).some((name) => selected.has(name));
     }
-  }
 
-  gameTriggerEl.addEventListener("click", () => {
-    if (openPopover && openPopover.panelEl === gamePanelEl) {
-      closePopover();
-      return;
-    }
-    openPopoverFor(gamePanelEl, gameTriggerEl);
-  });
+    triggerEl.addEventListener("click", () => {
+      if (openPopover && openPopover.panelEl === panelEl) {
+        closePopover();
+        return;
+      }
+      openPopoverFor(panelEl, triggerEl);
+    });
 
-  gameClearEl.addEventListener("click", () => {
-    selectedGames.clear();
-    for (const checkbox of gameListEl.querySelectorAll("input[type=checkbox]")) {
-      checkbox.checked = false;
-    }
-    updateGameTriggerLabel();
-    updateResults();
-  });
+    clearEl.addEventListener("click", () => {
+      selected.clear();
+      for (const checkbox of listEl.querySelectorAll("input[type=checkbox]")) {
+        checkbox.checked = false;
+      }
+      updateLabel();
+      updateResults();
+    });
 
-  function updateGameTriggerLabel() {
-    if (selectedGames.size === 0) {
-      gameTriggerValueEl.textContent = "All games";
-    } else if (selectedGames.size === 1) {
-      gameTriggerValueEl.textContent = [...selectedGames][0];
-    } else {
-      gameTriggerValueEl.textContent = `${selectedGames.size} games selected`;
-    }
+    return { rootEl, build, matches, isActive: () => selected.size > 0 };
   }
 
   // ---------------------------------------------------------------------
-  // Combined filtering — a date, a set of games, both, or neither.
+  // Combined filtering — any mix of a date, games and series (or none).
   // ---------------------------------------------------------------------
 
-  function matchesSelectedGames(video) {
-    if (selectedGames.size === 0) return true;
-    return (video.games || []).some((g) => selectedGames.has(g));
+  function matchesPickers(video) {
+    return gamePicker.matches(video) && seriesPicker.matches(video);
   }
 
   function updateResults() {
     const hasDate = selectedMonth !== null && selectedDay !== null;
-    const hasGames = selectedGames.size > 0;
+    const hasPicks = gamePicker.isActive() || seriesPicker.isActive();
 
-    if (!hasDate && !hasGames) {
+    if (!hasDate && !hasPicks) {
       showEmptyState();
       return;
     }
@@ -286,11 +320,11 @@
     if (hasDate) {
       const mm = String(selectedMonth + 1).padStart(2, "0");
       const dd = String(selectedDay).padStart(2, "0");
-      entries = (byDay[`${mm}-${dd}`] || []).filter(matchesSelectedGames);
+      entries = (byDay[`${mm}-${dd}`] || []).filter(matchesPickers);
       mode = "date";
     } else {
-      entries = allVideos.filter(matchesSelectedGames);
-      mode = "game";
+      entries = allVideos.filter(matchesPickers);
+      mode = "all";
     }
 
     render(entries, mode);
@@ -299,7 +333,7 @@
   function showEmptyState() {
     hideNowPlaying();
     statusEl.hidden = false;
-    statusEl.textContent = "Pick a date or a game above to see what was uploaded.";
+    statusEl.textContent = "Pick a date, a game or a series above to see what was uploaded.";
     moreHeadingEl.hidden = true;
     shortsHeadingEl.hidden = true;
     resultsEl.innerHTML = "";
@@ -308,9 +342,9 @@
 
   // Clears whatever was on screen for the previous selection, then builds
   // the grid(s) for the new one. Safe to call repeatedly as the pickers
-  // change. `mode` is "date" (a specific day, maybe also game-filtered) or
-  // "game" (every day, filtered to the chosen game(s)) — it only changes
-  // the section headings.
+  // change. `mode` is "date" (a specific day, maybe also game/series-
+  // filtered) or "all" (every day, filtered to the chosen games/series) — it
+  // only changes the section headings.
   function render(entries, mode) {
     hideNowPlaying();
 
@@ -324,8 +358,8 @@
       statusEl.hidden = false;
       statusEl.textContent =
         mode === "date"
-          ? "No Yogscast main-channel videos match this date — try another day or game."
-          : "No Yogscast main-channel videos match this game — try another one.";
+          ? "No Yogscast main-channel videos match this date — try another day, game or series."
+          : "No Yogscast main-channel videos match that combination — try loosening it.";
       return;
     }
 

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Custom Filter — On This Day in Yogscast History</title>
-  <meta name="description" content="Pick any date and/or game and browse the Yogscast main-channel videos that match." />
+  <meta name="description" content="Pick any date, game or series and browse the Yogscast main-channel videos that match." />
 
   <!-- AdSense: once your site is approved, paste your AdSense loader script
        here (see README.md > "Adding AdSense"). Left out until then. -->
@@ -54,14 +54,14 @@
       </button>
     </header>
 
-    <!-- Two independent filters that can be combined: a date (no year —
+    <!-- Three independent filters that can be combined: a date (no year —
          the calendar just loops the 12 months forever, since the site only
-         ever looks videos up by month + day) and a game (checked off a
-         multi-select list built from each video's title). Neither is
-         pre-selected, so a first-time visitor sees an empty page until they
-         choose something. Picking a game with no date browses that game
-         across every day; picking a date with no game shows that day's
-         videos; picking both narrows to videos matching both. -->
+         ever looks videos up by month + day), a game and a series (each
+         checked off a multi-select list built from the video titles — see
+         scripts/lib/tags.js). None is pre-selected, so a first-time visitor
+         sees an empty page until they choose something. Games/series with
+         no date browse every day; a date on its own shows that day's
+         videos; any combination narrows to videos matching all of them. -->
     <section class="date-filter">
       <div class="filter-group">
         <span class="date-filter-label" id="date-picker-label">Pick a date</span>
@@ -117,7 +117,38 @@
               <span class="game-picker-panel-title">Filter by game</span>
               <button type="button" class="game-picker-clear" id="game-picker-clear">Clear</button>
             </div>
-            <div class="game-picker-list" id="game-picker-list"></div>
+            <div class="game-picker-scroll">
+              <div class="game-picker-list" id="game-picker-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <span class="date-filter-label" id="series-picker-label">Filter by series</span>
+        <div class="game-picker" id="series-picker">
+          <button
+            type="button"
+            class="date-picker-trigger"
+            id="series-picker-trigger"
+            aria-haspopup="true"
+            aria-expanded="false"
+            aria-labelledby="series-picker-label series-picker-value"
+          >
+            <span id="series-picker-value">All series</span>
+            <svg class="date-picker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 9l6 6 6-6"></path>
+            </svg>
+          </button>
+
+          <div class="game-picker-panel" id="series-picker-panel" hidden>
+            <div class="game-picker-panel-header">
+              <span class="game-picker-panel-title">Filter by series</span>
+              <button type="button" class="game-picker-clear" id="series-picker-clear">Clear</button>
+            </div>
+            <div class="game-picker-scroll">
+              <div class="game-picker-list" id="series-picker-list"></div>
+            </div>
           </div>
         </div>
       </div>

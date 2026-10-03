@@ -361,11 +361,13 @@ main {
   position: relative;
 }
 
-#game-picker-trigger {
+#game-picker-trigger,
+#series-picker-trigger {
   max-width: 260px;
 }
 
-#game-picker-value {
+#game-picker-value,
+#series-picker-value {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -409,12 +411,19 @@ main {
   text-decoration: underline;
 }
 
-.game-picker-list {
-  columns: 3;
-  column-gap: 16px;
+/* The scroll box and the columns live on separate elements on purpose: if
+   a multi-column box is also height-capped, the browser spills the extra
+   names sideways into more columns (a horizontal scrollbar) instead of
+   letting you scroll down. */
+.game-picker-scroll {
   max-height: 340px;
   overflow-y: auto;
   padding-right: 4px;
+}
+
+.game-picker-list {
+  columns: 3;
+  column-gap: 16px;
 }
 
 .game-picker-option {

@@ -210,8 +210,8 @@ main {
   background: var(--accent-soft);
 }
 
-/* The two filters on the Custom Filter page — date and game — sit side by
-   side and wrap onto their own lines on narrow screens. */
+/* The filter row on the Custom Filter page — search, date, game and series
+   — sits side by side and wraps onto more lines on narrow screens. */
 .date-filter {
   display: flex;
   flex-wrap: wrap;
@@ -225,6 +225,53 @@ main {
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
+}
+
+/* Title search — first in the filter row. Styled to match the picker
+   buttons next to it, with a magnifying-glass icon inside the box. */
+.filter-group-search {
+  flex: 0 1 260px;
+  min-width: 200px;
+}
+
+.video-search {
+  position: relative;
+  width: 100%;
+}
+
+.video-search .date-picker-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.video-search-input {
+  width: 100%;
+  font: inherit;
+  font-size: 1rem;
+  padding: 10px 12px 10px 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
+.video-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.video-search-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* On phones the search gets a full row to itself, above the pickers. */
+@media (max-width: 640px) {
+  .filter-group-search {
+    flex-basis: 100%;
+  }
 }
 
 .date-filter-label {

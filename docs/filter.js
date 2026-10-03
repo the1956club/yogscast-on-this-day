@@ -70,6 +70,33 @@
     seriesPicker.rootEl,
   ];
 
+  // Free-text title search. Every word typed has to appear somewhere in the
+  // title (in any order), so "jaffa factory 2" or "israphel oasis" both work.
+  // Fewer than 2 characters counts as no search, so a single stray letter
+  // doesn't dump the whole archive on the page.
+  const searchInputEl = document.getElementById("video-search");
+  let searchTerms = [];
+  let searchTimer = null;
+
+  if (searchInputEl) {
+    searchInputEl.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        const query = normaliseForSearch(searchInputEl.value);
+        searchTerms = query.length >= 2 ? query.split(" ") : [];
+        updateResults();
+      }, 200);
+    });
+    // Enter shouldn't do anything surprising (there's no form to submit) —
+    // just apply the search straight away instead of waiting for the delay.
+    searchInputEl.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        searchInputEl.dispatchEvent(new Event("input"));
+      }
+    });
+  }
+
   // No default date/game/series and nothing fetched-and-rendered up front —
   // a first-time visitor sees an empty page (just the pickers) until they
   // choose something.
@@ -78,7 +105,10 @@
     if (!res.ok) throw new Error(`Failed to load dataset (${res.status})`);
     byDay = await res.json();
     for (const entries of Object.values(byDay)) {
-      for (const video of entries) allVideos.push(video);
+      for (const video of entries) {
+        video.searchText = normaliseForSearch(video.title);
+        allVideos.push(video);
+      }
     }
     // Newest first, so browsing a game with no date picked reads like a feed.
     allVideos.sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1));
@@ -220,6 +250,14 @@
     const clearEl = document.getElementById(`${id}-clear`);
     const selected = new Set();
 
+    // If the markup isn't there (e.g. a browser still has an older cached
+    // copy of filter.html), hand back a picker that does nothing rather than
+    // letting one missing element break the whole page.
+    if (!rootEl || !triggerEl || !valueEl || !panelEl || !listEl || !clearEl) {
+      const inertEl = document.createElement("div");
+      return { rootEl: inertEl, build() {}, matches: () => true, isActive: () => false };
+    }
+
     function build() {
       const counts = new Map();
       for (const video of allVideos) {
@@ -299,16 +337,38 @@
   }
 
   // ---------------------------------------------------------------------
-  // Combined filtering — any mix of a date, games and series (or none).
+  // Combined filtering — any mix of a search, a date, games and series (or
+  // none). Everything that's set has to match.
   // ---------------------------------------------------------------------
 
+  // Lower-cases, strips accents, drops apostrophes ("Garry's" -> "garrys")
+  // and turns all other punctuation into spaces, so searches don't trip over
+  // how a title happens to be punctuated.
+  function normaliseForSearch(text) {
+    return (text || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/['\u2019]/g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  }
+
+  function matchesSearch(video) {
+    if (searchTerms.length === 0) return true;
+    const text = video.searchText || "";
+    return searchTerms.every((term) => text.includes(term));
+  }
+
   function matchesPickers(video) {
-    return gamePicker.matches(video) && seriesPicker.matches(video);
+    return matchesSearch(video) && gamePicker.matches(video) && seriesPicker.matches(video);
   }
 
   function updateResults() {
+    if (!byDay) return; // data still loading (or failed to load)
     const hasDate = selectedMonth !== null && selectedDay !== null;
-    const hasPicks = gamePicker.isActive() || seriesPicker.isActive();
+    const hasPicks =
+      searchTerms.length > 0 || gamePicker.isActive() || seriesPicker.isActive();
 
     if (!hasDate && !hasPicks) {
       showEmptyState();
@@ -333,7 +393,7 @@
   function showEmptyState() {
     hideNowPlaying();
     statusEl.hidden = false;
-    statusEl.textContent = "Pick a date, a game or a series above to see what was uploaded.";
+    statusEl.textContent = "Search for a video, or pick a date, a game or a series above to see what was uploaded.";
     moreHeadingEl.hidden = true;
     shortsHeadingEl.hidden = true;
     resultsEl.innerHTML = "";

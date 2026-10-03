@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Custom Filter — On This Day in Yogscast History</title>
-  <meta name="description" content="Pick any date, game or series and browse the Yogscast main-channel videos that match." />
+  <meta name="description" content="Search, or pick any date, game or series, and browse the Yogscast main-channel videos that match." />
 
   <!-- AdSense: once your site is approved, paste your AdSense loader script
        here (see README.md > "Adding AdSense"). Left out until then. -->
@@ -54,7 +54,9 @@
       </button>
     </header>
 
-    <!-- Three independent filters that can be combined: a date (no year —
+    <!-- A title search plus three independent filters, all combinable. The
+         search matches every typed word anywhere in a title. The filters: a
+         date (no year —
          the calendar just loops the 12 months forever, since the site only
          ever looks videos up by month + day), a game and a series (each
          checked off a multi-select list built from the video titles — see
@@ -63,6 +65,24 @@
          no date browse every day; a date on its own shows that day's
          videos; any combination narrows to videos matching all of them. -->
     <section class="date-filter">
+      <div class="filter-group filter-group-search">
+        <label class="date-filter-label" for="video-search">Search videos</label>
+        <div class="video-search">
+          <svg class="date-picker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="M20 20l-3.5-3.5"></path>
+          </svg>
+          <input
+            type="search"
+            id="video-search"
+            class="video-search-input"
+            placeholder="Search titles&hellip;"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+      </div>
+
       <div class="filter-group">
         <span class="date-filter-label" id="date-picker-label">Pick a date</span>
         <div class="date-picker" id="date-picker">

@@ -5,6 +5,12 @@
   const shortsHeadingEl = document.getElementById("shorts-heading");
   const shortsResultsEl = document.getElementById("shorts-results");
 
+  // --- Now-playing player (single, fixed slot — not a carousel) ---
+  const nowPlayingEl = document.getElementById("now-playing");
+  const nowPlayingFrameEl = document.getElementById("now-playing-frame");
+  const nowPlayingTitleEl = document.getElementById("now-playing-title");
+  const nowPlayingMetaEl = document.getElementById("now-playing-meta");
+
   // --- Date picker elements ---
   const datePickerEl = document.getElementById("date-picker");
   const dateTriggerEl = document.getElementById("date-picker-trigger");
@@ -37,10 +43,10 @@
   // Every video across every day, flattened once up front so the "by game"
   // filter can browse across all dates, not just one day at a time.
   let allVideos = [];
-  // The card currently showing an inline player instead of its thumbnail,
-  // and the video it's playing — so a second click elsewhere can swap it
-  // back to a thumbnail before playing the new one.
-  let playing = null;
+  // The video currently loaded in the single top player, if any (not a
+  // per-card thing — every card stays a thumbnail; clicking any of them
+  // just changes what's loaded here).
+  let nowPlayingVideoId = null;
 
   // The month currently shown in the open calendar panel, vs. the month/day
   // the visitor has actually picked (null until they click a day).
@@ -291,7 +297,7 @@
   }
 
   function showEmptyState() {
-    playing = null;
+    hideNowPlaying();
     statusEl.hidden = false;
     statusEl.textContent = "Pick a date or a game above to see what was uploaded.";
     moreHeadingEl.hidden = true;
@@ -306,7 +312,7 @@
   // "game" (every day, filtered to the chosen game(s)) — it only changes
   // the section headings.
   function render(entries, mode) {
-    playing = null;
+    hideNowPlaying();
 
     moreHeadingEl.hidden = true;
     shortsHeadingEl.hidden = true;
@@ -384,16 +390,17 @@
     renderCardThumb(a, video);
 
     if (inlinePlay) {
-      // Left-click plays the video right here in the card instead of
-      // navigating away. Cmd/ctrl/shift-click (or middle-click) still opens
-      // it on YouTube in a new tab, since the href is left intact.
+      // Left-click loads the video into the single player at the top of the
+      // page instead of navigating away. Cmd/ctrl/shift-click (or
+      // middle-click) still opens it on YouTube in a new tab, since the href
+      // is left intact.
       a.addEventListener("click", (event) => {
         if (event.defaultPrevented) return;
         if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
           return;
         }
         event.preventDefault();
-        playCard(a, video);
+        playTopVideo(video);
       });
     }
 
@@ -424,31 +431,41 @@
     `;
   }
 
-  function renderCardPlayer(a, video) {
-    a.innerHTML = `
-      <div class="thumb-wrap">
-        <iframe
-          src="https://www.youtube-nocookie.com/embed/${video.videoId}?autoplay=1"
-          title="${escapeHtml(video.title)}"
-          loading="lazy"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowfullscreen
-        ></iframe>
-      </div>
-      <div class="card-body">
-        <p class="card-title">${escapeHtml(video.title)}</p>
-        <p class="card-date">${formatViewCount(video.viewCount)} views</p>
-      </div>
+  // Loads a video into the single "now playing" player fixed near the top
+  // of the page (where the old carousel used to live) and scrolls it into
+  // view. Every card stays a plain thumbnail — nothing in the grid itself
+  // ever changes. Clicking a different card just swaps what's loaded here;
+  // this is deliberately one player, not a carousel.
+  function playTopVideo(video) {
+    if (nowPlayingVideoId === video.videoId) {
+      nowPlayingEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    nowPlayingVideoId = video.videoId;
+
+    nowPlayingFrameEl.innerHTML = `
+      <iframe
+        src="https://www.youtube-nocookie.com/embed/${video.videoId}?autoplay=1"
+        title="${escapeHtml(video.title)}"
+        loading="lazy"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen
+      ></iframe>
     `;
+    nowPlayingTitleEl.textContent = video.title;
+    nowPlayingMetaEl.textContent = `${formatViewCount(video.viewCount)} views`;
+    nowPlayingEl.hidden = false;
+    nowPlayingEl.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  // Swaps the clicked card over to an inline player, putting back whichever
-  // card was previously playing (if any) first.
-  function playCard(a, video) {
-    if (playing && playing.video.videoId === video.videoId) return;
-    if (playing) renderCardThumb(playing.el, playing.video);
-    renderCardPlayer(a, video);
-    playing = { el: a, video };
+  // Stops playback and hides the player — used whenever the filtered set of
+  // videos changes out from under it (a new date/game picked, etc.).
+  function hideNowPlaying() {
+    nowPlayingVideoId = null;
+    nowPlayingEl.hidden = true;
+    nowPlayingFrameEl.innerHTML = "";
+    nowPlayingTitleEl.textContent = "";
+    nowPlayingMetaEl.textContent = "";
   }
 
   function formatViewCount(viewCount) {

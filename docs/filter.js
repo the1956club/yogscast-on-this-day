@@ -11,6 +11,14 @@
   const nowPlayingTitleEl = document.getElementById("now-playing-title");
   const nowPlayingMetaEl = document.getElementById("now-playing-meta");
 
+  // --- Results toolbar: sort order + autoplay switch (under the heading) ---
+  // Either may be missing if a browser has an older cached filter.html; the
+  // code below copes with that (sorting stays newest-first, autoplay on).
+  const toolbarEl = document.getElementById("results-toolbar");
+  const sortSelectEl = document.getElementById("results-sort");
+  const autoplayWrapEl = document.getElementById("autoplay-wrap");
+  const autoplayToggleEl = document.getElementById("autoplay-toggle");
+
   // --- Date picker elements ---
   const datePickerEl = document.getElementById("date-picker");
   const dateTriggerEl = document.getElementById("date-picker-trigger");
@@ -39,6 +47,34 @@
   // per-card thing — every card stays a thumbnail; clicking any of them
   // just changes what's loaded here).
   let nowPlayingVideoId = null;
+
+  // What's currently on screen, kept so the sort order can be changed
+  // without re-filtering (and without stopping the video that's playing).
+  let lastEntries = [];
+  let lastMode = "all";
+  let sortOrder = "newest";
+  // The playable (non-Short) videos in the order they're shown — autoplay
+  // works down this list.
+  let playQueue = [];
+
+  // Autoplay: when the top player's video finishes, start the next one in
+  // the grid. Shares its on/off setting with the homepage's switch.
+  let autoplayOn = readAutoplayPref();
+
+  if (sortSelectEl) {
+    sortSelectEl.value = sortOrder;
+    sortSelectEl.addEventListener("change", () => {
+      sortOrder = sortSelectEl.value;
+      drawResults();
+    });
+  }
+  if (autoplayToggleEl) {
+    autoplayToggleEl.checked = autoplayOn;
+    autoplayToggleEl.addEventListener("change", () => {
+      autoplayOn = autoplayToggleEl.checked;
+      saveAutoplayPref(autoplayOn);
+    });
+  }
 
   // The month currently shown in the open calendar panel, vs. the month/day
   // the visitor has actually picked (null until they click a day).
@@ -402,23 +438,51 @@
     statusEl.textContent = "Search for a video, or pick a date, a game or a series above to see what was uploaded.";
     moreHeadingEl.hidden = true;
     shortsHeadingEl.hidden = true;
+    if (toolbarEl) toolbarEl.hidden = true;
     resultsEl.innerHTML = "";
     shortsResultsEl.innerHTML = "";
+    playQueue = [];
   }
 
-  // Clears whatever was on screen for the previous selection, then builds
-  // the grid(s) for the new one. Safe to call repeatedly as the pickers
-  // change. `mode` is "date" (a specific day, maybe also game/series-
-  // filtered) or "all" (every day, filtered to the chosen games/series) — it
-  // only changes the section headings.
+  // A new set of results (the search/date/game/series changed): stop
+  // whatever was playing, since it may not even be in the new results, then
+  // draw them. `mode` is "date" (a specific day, maybe also filtered) or
+  // "all" (every day, filtered) — it only changes the section headings.
   function render(entries, mode) {
     hideNowPlaying();
+    lastEntries = entries;
+    lastMode = mode;
+    drawResults();
+  }
+
+  const SORTERS = {
+    newest: (a, b) => (a.publishedAt < b.publishedAt ? 1 : a.publishedAt > b.publishedAt ? -1 : 0),
+    oldest: (a, b) => (a.publishedAt < b.publishedAt ? -1 : a.publishedAt > b.publishedAt ? 1 : 0),
+    views: (a, b) => (b.viewCount || 0) - (a.viewCount || 0),
+    // Ignores leading quotes/symbols so '"Shadow of Israphel" Part 2' files
+    // under S, and "Part 2" sorts before "Part 10".
+    title: (a, b) =>
+      titleSortKey(a).localeCompare(titleSortKey(b), undefined, { sensitivity: "base", numeric: true }),
+  };
+
+  function titleSortKey(video) {
+    return (video.title || "").replace(/^[^\p{L}\p{N}]+/u, "");
+  }
+
+  // (Re)draws the current results in the chosen sort order. Called after
+  // filtering, and on its own when only the sort order changes — in which
+  // case the video in the top player keeps playing.
+  function drawResults() {
+    const entries = [...lastEntries].sort(SORTERS[sortOrder] || SORTERS.newest);
+    const mode = lastMode;
 
     moreHeadingEl.hidden = true;
     shortsHeadingEl.hidden = true;
+    if (toolbarEl) toolbarEl.hidden = true;
     resultsEl.innerHTML = "";
     shortsResultsEl.innerHTML = "";
     statusEl.hidden = true;
+    playQueue = [];
 
     if (entries.length === 0) {
       statusEl.hidden = false;
@@ -433,6 +497,13 @@
     // down instead. See renderShorts().
     const regulars = entries.filter((v) => !v.isShort);
     const shorts = entries.filter((v) => v.isShort);
+    playQueue = regulars;
+
+    if (toolbarEl) {
+      toolbarEl.hidden = false;
+      // Autoplay needs at least two playable videos to move between.
+      if (autoplayWrapEl) autoplayWrapEl.hidden = regulars.length < 2;
+    }
 
     if (regulars.length > 0) {
       moreHeadingEl.hidden = false;
@@ -447,6 +518,7 @@
     }
 
     renderShorts(shorts, mode);
+    markPlayingCard();
   }
 
   // Shorts get their own section below the main grid. Each card links
@@ -483,6 +555,7 @@
   function renderCard(video, { inlinePlay = true, href } = {}) {
     const a = document.createElement("a");
     a.className = "video-card";
+    a.dataset.videoId = video.videoId;
     a.href = href || `https://www.youtube.com/watch?v=${video.videoId}`;
     a.rel = "noopener noreferrer";
     if (!inlinePlay) a.target = "_blank";
@@ -532,30 +605,42 @@
   }
 
   // Loads a video into the single "now playing" player fixed near the top
-  // of the page (where the old carousel used to live) and scrolls it into
-  // view. Every card stays a plain thumbnail — nothing in the grid itself
-  // ever changes. Clicking a different card just swaps what's loaded here;
-  // this is deliberately one player, not a carousel.
-  function playTopVideo(video) {
+  // of the page (where the old carousel used to live). Every card stays a
+  // plain thumbnail; clicking a different card just swaps what's loaded
+  // here — deliberately one player, not a carousel. A click scrolls up to
+  // the player; autoplay moving on by itself leaves the scroll alone.
+  function playTopVideo(video, { auto = false } = {}) {
     if (nowPlayingVideoId === video.videoId) {
       nowPlayingEl.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
     nowPlayingVideoId = video.videoId;
 
+    // enablejsapi lets the page hear back from the player (via the YouTube
+    // IFrame API) so it knows when the video ends — that drives autoplay.
+    const origin = encodeURIComponent(window.location.origin);
     nowPlayingFrameEl.innerHTML = `
       <iframe
-        src="https://www.youtube-nocookie.com/embed/${video.videoId}?autoplay=1"
+        src="https://www.youtube-nocookie.com/embed/${video.videoId}?autoplay=1&enablejsapi=1&origin=${origin}"
         title="${escapeHtml(video.title)}"
-        loading="lazy"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowfullscreen
       ></iframe>
     `;
+    watchForEnd(nowPlayingFrameEl.querySelector("iframe"), video.videoId);
     nowPlayingTitleEl.textContent = video.title;
     nowPlayingMetaEl.textContent = `${formatViewCount(video.viewCount)} views`;
     nowPlayingEl.hidden = false;
-    nowPlayingEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    markPlayingCard();
+    if (!auto) nowPlayingEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // Highlights whichever grid card is in the top player, so it's easy to see
+  // where you are in the list (especially once autoplay has moved on).
+  function markPlayingCard() {
+    for (const card of resultsEl.querySelectorAll(".video-card")) {
+      card.classList.toggle("is-playing", card.dataset.videoId === nowPlayingVideoId);
+    }
   }
 
   // Stops playback and hides the player — used whenever the filtered set of
@@ -566,6 +651,70 @@
     nowPlayingFrameEl.innerHTML = "";
     nowPlayingTitleEl.textContent = "";
     nowPlayingMetaEl.textContent = "";
+    markPlayingCard();
+  }
+
+  // When the playing video ends, start the next one in the grid's current
+  // order. Stops at the bottom of the list rather than wrapping round.
+  function onVideoEnded(videoId) {
+    if (!autoplayOn || nowPlayingVideoId !== videoId) return;
+    const idx = playQueue.findIndex((v) => v.videoId === videoId);
+    if (idx === -1 || idx + 1 >= playQueue.length) return;
+    playTopVideo(playQueue[idx + 1], { auto: true });
+  }
+
+  // Hooks the YouTube IFrame API onto a freshly-inserted player so we get a
+  // callback when it finishes. If the API can't load (blocked, offline...),
+  // playback still works — it just won't move on by itself.
+  function watchForEnd(iframe, videoId) {
+    loadYouTubeApi()
+      .then((YT) => {
+        if (!iframe.isConnected || nowPlayingVideoId !== videoId) return;
+        new YT.Player(iframe, {
+          events: {
+            onStateChange: (event) => {
+              if (event.data === YT.PlayerState.ENDED) onVideoEnded(videoId);
+            },
+          },
+        });
+      })
+      .catch((err) => console.warn("Autoplay unavailable:", err));
+  }
+
+  let youTubeApiPromise = null;
+  function loadYouTubeApi() {
+    if (youTubeApiPromise) return youTubeApiPromise;
+    youTubeApiPromise = new Promise((resolve, reject) => {
+      if (window.YT && window.YT.Player) {
+        resolve(window.YT);
+        return;
+      }
+      const previous = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof previous === "function") previous();
+        resolve(window.YT);
+      };
+      const script = document.createElement("script");
+      script.src = "https://www.youtube.com/iframe_api";
+      script.onerror = () => reject(new Error("Couldn't load the YouTube player API"));
+      document.head.appendChild(script);
+    });
+    return youTubeApiPromise;
+  }
+
+  // Same setting as the homepage's Autoplay switch (same localStorage key).
+  function readAutoplayPref() {
+    try {
+      return localStorage.getItem("autoplay") !== "off";
+    } catch (err) {
+      return true;
+    }
+  }
+
+  function saveAutoplayPref(on) {
+    try {
+      localStorage.setItem("autoplay", on ? "on" : "off");
+    } catch (err) {}
   }
 
   function formatViewCount(viewCount) {

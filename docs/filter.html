@@ -186,6 +186,26 @@
     <p class="status" id="status">Loading&hellip;</p>
 
     <h2 class="section-heading" id="more-heading" hidden>Videos on this day</h2>
+
+    <!-- Sort order for the results, plus the Autoplay switch: when on, the
+         next video in this order starts by itself once the playing one
+         finishes. -->
+    <div class="results-toolbar" id="results-toolbar" hidden>
+      <label class="results-sort">
+        <span class="results-sort-label">Sort by</span>
+        <select id="results-sort">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="views">Most viewed</option>
+          <option value="title">Title (A&ndash;Z)</option>
+        </select>
+      </label>
+      <label class="autoplay-toggle" id="autoplay-wrap" hidden>
+        <input type="checkbox" id="autoplay-toggle" checked />
+        <span class="autoplay-switch" aria-hidden="true"><span class="autoplay-knob"></span></span>
+        <span>Autoplay</span>
+      </label>
+    </div>
     <div id="results"></div>
 
     <h2 class="section-heading" id="shorts-heading" hidden>Shorts on this day</h2>

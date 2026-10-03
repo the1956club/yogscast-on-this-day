@@ -130,10 +130,16 @@
     if (openPopover && openPopover.panelEl !== panelEl) closePopover();
     panelEl.hidden = false;
     // Panels hang off the left edge of their trigger; nudge one back left if
-    // that would push it off the right side of the screen (mostly the
-    // series picker, which sits furthest right).
+    // it would stick out past the right edge of the page content (mostly the
+    // series picker, which sits furthest right), so it lines up with the
+    // filter row and video grid instead.
     panelEl.style.left = "";
-    const overflow = panelEl.getBoundingClientRect().right - (window.innerWidth - 16);
+    const mainEl = panelEl.closest("main");
+    const rightLimit = Math.min(
+      window.innerWidth - 16,
+      mainEl ? mainEl.getBoundingClientRect().right : Infinity
+    );
+    const overflow = panelEl.getBoundingClientRect().right - rightLimit;
     if (overflow > 0) panelEl.style.left = `${-overflow}px`;
     triggerEl.setAttribute("aria-expanded", "true");
     if (!openPopover) {

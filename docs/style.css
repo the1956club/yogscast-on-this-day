@@ -210,29 +210,47 @@ main {
   background: var(--accent-soft);
 }
 
-/* The filter row on the Custom Filter page — search, date, game and series
-   — sits side by side and wraps onto more lines on narrow screens. */
+/* The filter row on the Custom Filter page — search, date, game and series.
+   It spans the full width of the page so its edges line up with the video
+   grid below (same 16px gaps too). The search box gets a double-width
+   column; the three pickers share the rest equally. */
 .date-filter {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  align-items: end;
+  gap: 16px;
   margin: 0 0 28px;
 }
 
 .filter-group {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 6px;
+  min-width: 0;
+}
+
+/* Each picker (and its button) stretches to fill its column. */
+.date-filter .date-picker,
+.date-filter .game-picker {
+  width: 100%;
+}
+
+.date-filter .date-picker-trigger {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.date-filter .date-picker-trigger > span {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Title search — first in the filter row. Styled to match the picker
    buttons next to it, with a magnifying-glass icon inside the box. */
-.filter-group-search {
-  flex: 0 1 260px;
-  min-width: 200px;
-}
 
 .video-search {
   position: relative;
@@ -267,10 +285,28 @@ main {
   outline-offset: 2px;
 }
 
-/* On phones the search gets a full row to itself, above the pickers. */
-@media (max-width: 640px) {
+/* Tablets and phones: the search gets a full row to itself, with the three
+   pickers in a row underneath. */
+@media (max-width: 760px) {
+  .date-filter {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
   .filter-group-search {
-    flex-basis: 100%;
+    grid-column: 1 / -1;
+  }
+}
+
+/* Phones: three pickers in a row is too tight to read, so date and game
+   share a row and series gets the full width underneath. */
+@media (max-width: 480px) {
+  .date-filter {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .date-filter .filter-group:last-child {
+    grid-column: 1 / -1;
   }
 }
 
@@ -406,18 +442,6 @@ main {
    calendar. Multi-select: ticking games doesn't close the panel. */
 .game-picker {
   position: relative;
-}
-
-#game-picker-trigger,
-#series-picker-trigger {
-  max-width: 260px;
-}
-
-#game-picker-value,
-#series-picker-value {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .game-picker-panel {

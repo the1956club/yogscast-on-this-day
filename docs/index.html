@@ -69,7 +69,16 @@
       <button type="button" class="carousel-arrow carousel-arrow-right" id="carousel-next" aria-label="Next video">&#10095;</button>
     </section>
 
-    <p class="current-views" id="current-views" hidden></p>
+    <div class="below-carousel">
+      <p class="current-views" id="current-views" hidden></p>
+      <!-- When on, the next video in the carousel starts by itself once the
+           current one finishes. Hidden when there's only one video today. -->
+      <label class="autoplay-toggle" id="autoplay-wrap" hidden>
+        <input type="checkbox" id="autoplay-toggle" checked />
+        <span class="autoplay-switch" aria-hidden="true"><span class="autoplay-knob"></span></span>
+        <span>Autoplay</span>
+      </label>
+    </div>
     <p class="current-desc" id="current-desc" hidden></p>
 
     <h2 class="section-heading" id="more-heading" hidden>Also on this day</h2>

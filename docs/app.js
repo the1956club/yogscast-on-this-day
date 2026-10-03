@@ -18,6 +18,11 @@
   const carouselPrevEl = document.getElementById("carousel-prev");
   const carouselNextEl = document.getElementById("carousel-next");
 
+  // Optional: if this page is served alongside an older cached index.html
+  // without the autoplay switch, everything below just treats autoplay as on.
+  const autoplayWrapEl = document.getElementById("autoplay-wrap");
+  const autoplayToggleEl = document.getElementById("autoplay-toggle");
+
   const PLAY_ICON = `
     <span class="play-hint">
       <svg viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"></path></svg>
@@ -34,6 +39,14 @@
   let itemEls = [];
   let centerIndex = 0;
   let playingIndex = null;
+
+  // Autoplay: when the playing video finishes, slide the carousel on to the
+  // next video and start it, working through the whole day once. Remembered
+  // per browser via localStorage (falls back to on if that's unavailable).
+  let autoplayOn = readAutoplayPref();
+  // Videos already played in the current autoplay run, so it stops after
+  // going all the way round the day rather than looping forever.
+  let autoplayRun = new Set();
 
   try {
     const res = await fetch("data/videos-by-day.json", { cache: "no-store" });
@@ -82,6 +95,16 @@
       carouselNextEl.addEventListener("click", () => goTo(centerIndex + 1));
       carouselPrevEl.hidden = allEntries.length <= 1;
       carouselNextEl.hidden = allEntries.length <= 1;
+
+      // Autoplay only makes sense with more than one video to move on to.
+      if (autoplayWrapEl && autoplayToggleEl && allEntries.length > 1) {
+        autoplayWrapEl.hidden = false;
+        autoplayToggleEl.checked = autoplayOn;
+        autoplayToggleEl.addEventListener("change", () => {
+          autoplayOn = autoplayToggleEl.checked;
+          saveAutoplayPref(autoplayOn);
+        });
+      }
 
       carouselWrapEl.tabIndex = 0;
       carouselWrapEl.addEventListener("keydown", (event) => {
@@ -132,21 +155,97 @@
     `;
   }
 
-  function renderPlayer(el, video) {
+  // enablejsapi lets the page hear back from the embedded player (via the
+  // YouTube IFrame API) so it knows when a video has finished — that's what
+  // drives autoplay.
+  function renderPlayer(el, video, idx) {
+    const origin = encodeURIComponent(window.location.origin);
     el.innerHTML = `
       <iframe
-        src="https://www.youtube-nocookie.com/embed/${video.videoId}?autoplay=1"
+        src="https://www.youtube-nocookie.com/embed/${video.videoId}?autoplay=1&enablejsapi=1&origin=${origin}"
         title="${escapeHtml(video.title)}"
-        loading="lazy"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowfullscreen
       ></iframe>
     `;
+    watchForEnd(el.querySelector("iframe"), idx);
+  }
+
+  // Hooks the YouTube IFrame API onto a freshly-inserted player so we get a
+  // callback when it finishes. If the API can't load (blocked, offline...),
+  // playback still works — it just won't move on by itself.
+  function watchForEnd(iframe, idx) {
+    loadYouTubeApi()
+      .then((YT) => {
+        // The visitor may have moved on while the API was loading.
+        if (!iframe.isConnected || playingIndex !== idx) return;
+        new YT.Player(iframe, {
+          events: {
+            onStateChange: (event) => {
+              if (event.data === YT.PlayerState.ENDED) onVideoEnded(idx);
+            },
+          },
+        });
+      })
+      .catch((err) => console.warn("Autoplay unavailable:", err));
+  }
+
+  let youTubeApiPromise = null;
+  function loadYouTubeApi() {
+    if (youTubeApiPromise) return youTubeApiPromise;
+    youTubeApiPromise = new Promise((resolve, reject) => {
+      if (window.YT && window.YT.Player) {
+        resolve(window.YT);
+        return;
+      }
+      const previous = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof previous === "function") previous();
+        resolve(window.YT);
+      };
+      const script = document.createElement("script");
+      script.src = "https://www.youtube.com/iframe_api";
+      script.onerror = () => reject(new Error("Couldn't load the YouTube player API"));
+      document.head.appendChild(script);
+    });
+    return youTubeApiPromise;
+  }
+
+  // A video finished: if autoplay is on, slide on to the next one in the
+  // carousel (same direction as the right arrow) and start it — unless that
+  // would mean replaying something from this run, i.e. we've been all the way
+  // round the day.
+  function onVideoEnded(idx) {
+    if (!autoplayOn || playingIndex !== idx || allEntries.length < 2) return;
+    const nextIdx = (idx + 1) % allEntries.length;
+    if (autoplayRun.has(allEntries[nextIdx].videoId)) return;
+    autoplayRun.add(allEntries[nextIdx].videoId);
+    playAt(nextIdx);
+  }
+
+  // Starting a video by hand begins a fresh autoplay run from that video.
+  function startManualPlay(idx) {
+    autoplayRun = new Set([allEntries[idx].videoId]);
+    playAt(idx);
+  }
+
+  function readAutoplayPref() {
+    try {
+      return localStorage.getItem("autoplay") !== "off";
+    } catch (err) {
+      return true;
+    }
+  }
+
+  function saveAutoplayPref(on) {
+    try {
+      localStorage.setItem("autoplay", on ? "on" : "off");
+    } catch (err) {}
   }
 
   function onItemClick(idx) {
     if (idx === centerIndex) {
-      if (playingIndex !== idx) playAt(idx);
+      if (playingIndex !== idx) startManualPlay(idx);
       return;
     }
     goTo(idx);
@@ -171,7 +270,7 @@
       renderThumb(itemEls[playingIndex], allEntries[playingIndex]);
     }
     playingIndex = centerIndex;
-    renderPlayer(itemEls[centerIndex], allEntries[centerIndex]);
+    renderPlayer(itemEls[centerIndex], allEntries[centerIndex], centerIndex);
     refreshAll();
   }
 
@@ -318,7 +417,7 @@
         }
         event.preventDefault();
         const idx = allEntries.findIndex((v) => v.videoId === video.videoId);
-        if (idx !== -1) playAt(idx);
+        if (idx !== -1) startManualPlay(idx);
         carouselWrapEl.scrollIntoView({ behavior: "smooth", block: "center" });
       });
     }

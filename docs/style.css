@@ -506,6 +506,44 @@ main {
   padding: 40px 0;
 }
 
+/* Custom Filter page: the single "now playing" player. Clicking any video
+   card loads it in here instead of inline in the card — a fixed slot near
+   the top of the page, not a carousel, so there's never more than one
+   video loaded at a time. */
+.now-playing {
+  max-width: 800px;
+  margin: 0 auto 40px;
+}
+
+.now-playing-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-elevated);
+  border: 1px solid var(--accent);
+}
+
+.now-playing-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.now-playing-title {
+  margin: 14px 0 4px;
+  font-size: clamp(1.05rem, 2.6vw, 1.3rem);
+  line-height: 1.3;
+}
+
+.now-playing-meta {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
 /* Carousel */
 
 .carousel-wrap {

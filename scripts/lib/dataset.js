@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { tagVideo, firstLine } = require("./tags");
 
 // Both files live inside docs/data so the "docs" folder is fully
 // self-contained and can be served directly by GitHub Pages
@@ -24,14 +25,19 @@ function buildByDayIndex(allVideos) {
     const key = `${mm}-${dd}`;
 
     if (!byDay[key]) byDay[key] = [];
+    const { games, series } = tagVideo(v);
     byDay[key].push({
       videoId: v.videoId,
       title: v.title,
-      description: v.description || "",
+      // Only the first line is ever displayed, so the rest is dropped to
+      // keep this file small (see firstLine in tags.js).
+      description: firstLine(v.description),
       viewCount: v.viewCount || 0,
       year: d.getUTCFullYear(),
       publishedAt: v.publishedAt,
       isShort: !!v.isShort,
+      games,
+      series,
     });
   }
 

@@ -54,7 +54,7 @@ body {
   padding: 0 16px 48px;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: "Clarity City", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   line-height: 1.5;
   overflow-x: hidden;
   transition: background-color 0.2s ease, color 0.2s ease;
@@ -1073,4 +1073,54 @@ main {
 .analytics-optout-status {
   font-size: 0.85rem;
   color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------------------
+   Typography: Luckiest Guy for headings and the year badges, Clarity City
+   (set on body above) for everything else. Both load from Google Fonts in
+   each page's <head>. Luckiest Guy only comes in one weight and is already
+   chunky, so headings using it are set to normal weight (no fake bold).
+   --------------------------------------------------------------------- */
+.today-label,
+.section-heading,
+.page-title,
+.about-content h1,
+.about-content h2,
+.year-badge,
+.current-year {
+  font-family: "Luckiest Guy", "Clarity City", system-ui, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  /* Luckiest Guy's lowercase letters are odd-looking variants of its
+     capitals, so everything in it is set in capitals for a consistent look. */
+  text-transform: uppercase;
+}
+
+.today-label {
+  font-size: clamp(1.6rem, 4.5vw, 2.3rem);
+  line-height: 1.1;
+}
+
+.section-heading {
+  font-size: 1.35rem;
+}
+
+.about-content h1,
+.about-content h2 {
+  font-size: clamp(1.5rem, 3.6vw, 1.85rem);
+  line-height: 1.15;
+}
+
+/* The display font sits a touch high in its box, so the badge padding is
+   nudged to keep the year optically centred. */
+.carousel-item .year-badge,
+.video-card .year-badge {
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1;
+  padding: 6px 10px 4px;
+}
+
+.current-year {
+  font-size: 1.15rem;
 }

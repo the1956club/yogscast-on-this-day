@@ -23,6 +23,17 @@
     })();
   </script>
 
+  <!-- Clean addresses: the site lives at /, /filter and /about. GitHub Pages
+       still serves the old .html addresses, so if someone arrives on one,
+       quietly tidy what the address bar shows, and tell search engines which
+       address is the real one. -->
+  <link rel="canonical" href="https://the1956club.com/filter" />
+  <script>
+    if (/\.html$/.test(location.pathname)) {
+      history.replaceState(null, "", location.pathname.replace(/(index)?\.html$/, "") + location.search + location.hash);
+    }
+  </script>
+
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -33,9 +44,9 @@
     <img class="site-banner" src="image.png" alt="The Yogscast Nostalgia Machine (fan made)" width="1200" height="500" />
 
     <nav class="site-nav" aria-label="Primary">
-      <a class="site-nav-link" href="index.html">Home</a>
-      <a class="site-nav-link" href="filter.html" aria-current="page">Custom Filter</a>
-      <a class="site-nav-link" href="about.html">About</a>
+      <a class="site-nav-link" href="/">Home</a>
+      <a class="site-nav-link" href="/filter" aria-current="page">Custom Filter</a>
+      <a class="site-nav-link" href="/about">About</a>
     </nav>
 
     <header class="page-header">

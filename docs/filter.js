@@ -151,7 +151,10 @@
   // a first-time visitor sees an empty page (just the pickers) until they
   // choose something.
   try {
-    const res = await fetch("data/videos-by-day.json", { cache: "no-store" });
+    // "no-cache" = always check for a newer copy, but if it hasn't changed
+    // since last time, reuse the one already downloaded instead of fetching
+    // all ~2.7MB again.
+    const res = await fetch("data/videos-by-day.json", { cache: "no-cache" });
     if (!res.ok) throw new Error(`Failed to load dataset (${res.status})`);
     byDay = await res.json();
     for (const entries of Object.values(byDay)) {

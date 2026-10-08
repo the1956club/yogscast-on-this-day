@@ -49,7 +49,10 @@
   let autoplayRun = new Set();
 
   try {
-    const res = await fetch("data/videos-by-day.json", { cache: "no-store" });
+    // "no-cache" = always check for a newer copy, but if it hasn't changed
+    // since last time, reuse the one already downloaded instead of fetching
+    // all ~2.7MB again.
+    const res = await fetch("data/videos-by-day.json", { cache: "no-cache" });
     if (!res.ok) throw new Error(`Failed to load dataset (${res.status})`);
     const byDay = await res.json();
 

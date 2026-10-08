@@ -813,7 +813,9 @@ main {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: min(760px, 86vw);
+  /* Never wider than the space between the two arrows, so the centred
+     video is never clipped at the sides (phones override this below). */
+  width: min(760px, calc(100vw - 140px));
   aspect-ratio: 16 / 9;
   border-radius: var(--radius);
   overflow: hidden;
@@ -864,6 +866,31 @@ main {
 
 .carousel-item.is-center:hover .play-hint {
   opacity: 1;
+}
+
+/* Phones: there isn't room for arrows either side of the video, so they
+   move underneath it (side by side, centred) and the video gets the full
+   width of the screen. */
+@media (max-width: 640px) {
+  .carousel-wrap {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    padding: 0 16px;
+  }
+
+  .carousel-viewport {
+    flex: 0 0 100%;
+    order: 0;
+  }
+
+  .carousel-arrow {
+    order: 1;
+  }
+
+  .carousel-item {
+    width: calc(100vw - 32px);
+  }
 }
 
 .carousel-item .play-hint svg {

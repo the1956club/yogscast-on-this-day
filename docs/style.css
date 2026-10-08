@@ -1013,17 +1013,25 @@ main {
   padding-bottom: 24px;
 }
 
+/* Section headings: noticeably bigger and bolder than the paragraphs. */
+.about-content h1,
 .about-content h2 {
-  font-size: 1.15rem;
-  margin: 32px 0 10px;
+  font-size: clamp(1.35rem, 3.2vw, 1.6rem);
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--text);
+  margin: 40px 0 12px;
 }
 
+.about-content h1:first-child,
 .about-content h2:first-child {
   margin-top: 16px;
 }
 
 .about-content p {
   margin: 0 0 14px;
+  font-size: 1rem;
+  line-height: 1.65;
   color: var(--text-muted);
 }
 

@@ -103,6 +103,7 @@
         autoplayToggleEl.addEventListener("change", () => {
           autoplayOn = autoplayToggleEl.checked;
           saveAutoplayPref(autoplayOn);
+          track("autoplay_toggle", { enabled: autoplayOn, page_type: "home" });
         });
       }
 
@@ -216,16 +217,33 @@
   // would mean replaying something from this run, i.e. we've been all the way
   // round the day.
   function onVideoEnded(idx) {
-    if (!autoplayOn || playingIndex !== idx || allEntries.length < 2) return;
+    if (playingIndex !== idx) return;
+    track("video_complete", {
+      video_id: allEntries[idx].videoId,
+      video_title: clip(allEntries[idx].title),
+      page_type: "home",
+    });
+    if (!autoplayOn || allEntries.length < 2) return;
     const nextIdx = (idx + 1) % allEntries.length;
     if (autoplayRun.has(allEntries[nextIdx].videoId)) return;
     autoplayRun.add(allEntries[nextIdx].videoId);
+    trackPlay(nextIdx, "autoplay");
     playAt(nextIdx);
+  }
+
+  function trackPlay(idx, source) {
+    track("video_play", {
+      video_id: allEntries[idx].videoId,
+      video_title: clip(allEntries[idx].title),
+      page_type: "home",
+      play_source: source,
+    });
   }
 
   // Starting a video by hand begins a fresh autoplay run from that video.
   function startManualPlay(idx) {
     autoplayRun = new Set([allEntries[idx].videoId]);
+    trackPlay(idx, "click");
     playAt(idx);
   }
 
@@ -445,6 +463,20 @@
     `;
 
     return a;
+  }
+
+  // Sends a Google Analytics event (the gtag snippet is in the page <head>).
+  // Does nothing if analytics didn't load — blocked, offline, or the visitor
+  // switched it off on the About page.
+  function track(name, params) {
+    try {
+      if (typeof window.gtag === "function") window.gtag("event", name, params || {});
+    } catch (err) {}
+  }
+
+  // GA4 caps text parameters at 100 characters.
+  function clip(text) {
+    return String(text || "").slice(0, 100);
   }
 
   function ordinal(n) {

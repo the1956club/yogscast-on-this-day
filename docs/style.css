@@ -964,6 +964,16 @@ main {
   font-size: 0.8rem;
 }
 
+.site-footer a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.site-footer a:hover {
+  color: var(--accent);
+}
+
 /* About page prose */
 
 .page-title {
@@ -992,4 +1002,40 @@ main {
 
 .about-content a {
   color: var(--accent);
+}
+
+/* About page: analytics opt-out switch. */
+.analytics-optout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.analytics-optout-button {
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.analytics-optout-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.analytics-optout-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.analytics-optout-status {
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }

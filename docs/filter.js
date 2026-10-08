@@ -65,6 +65,7 @@
     sortSelectEl.value = sortOrder;
     sortSelectEl.addEventListener("change", () => {
       sortOrder = sortSelectEl.value;
+      track("sort_change", { sort_order: sortOrder });
       drawResults();
     });
   }
@@ -73,6 +74,7 @@
     autoplayToggleEl.addEventListener("change", () => {
       autoplayOn = autoplayToggleEl.checked;
       saveAutoplayPref(autoplayOn);
+      track("autoplay_toggle", { enabled: autoplayOn, page_type: "filter" });
     });
   }
 
@@ -113,6 +115,10 @@
   const searchInputEl = document.getElementById("video-search");
   let searchTerms = [];
   let searchTimer = null;
+  // Searches are reported to analytics once the visitor stops typing for a
+  // moment, so "j", "ja", "jaf"... don't each count as a search.
+  let searchTrackTimer = null;
+  let lastTrackedSearch = "";
 
   if (searchInputEl) {
     searchInputEl.addEventListener("input", () => {
@@ -121,6 +127,14 @@
         const query = normaliseForSearch(searchInputEl.value);
         searchTerms = query.length >= 2 ? query.split(" ") : [];
         updateResults();
+
+        clearTimeout(searchTrackTimer);
+        if (query.length >= 2 && query !== lastTrackedSearch) {
+          searchTrackTimer = setTimeout(() => {
+            lastTrackedSearch = query;
+            track("search", { search_term: clip(query) });
+          }, 1500);
+        }
       }, 200);
     });
     // Enter shouldn't do anything surprising (there's no form to submit) —
@@ -274,6 +288,7 @@
     selectedDay = day;
     dateTriggerValueEl.textContent = `${day} ${MONTH_NAMES[month]}`;
     closePopover();
+    track("filter_select", { filter_type: "date", filter_value: `${day} ${MONTH_NAMES[month]}`, selected: true });
     updateResults();
   }
 
@@ -329,6 +344,11 @@
           if (checkbox.checked) selected.add(name);
           else selected.delete(name);
           updateLabel();
+          track("filter_select", {
+            filter_type: field === "games" ? "game" : "series",
+            filter_value: clip(name),
+            selected: checkbox.checked,
+          });
           updateResults();
         });
 
@@ -615,6 +635,12 @@
       return;
     }
     nowPlayingVideoId = video.videoId;
+    track("video_play", {
+      video_id: video.videoId,
+      video_title: clip(video.title),
+      page_type: "filter",
+      play_source: auto ? "autoplay" : "click",
+    });
 
     // enablejsapi lets the page hear back from the player (via the YouTube
     // IFrame API) so it knows when the video ends — that drives autoplay.
@@ -657,8 +683,16 @@
   // When the playing video ends, start the next one in the grid's current
   // order. Stops at the bottom of the list rather than wrapping round.
   function onVideoEnded(videoId) {
-    if (!autoplayOn || nowPlayingVideoId !== videoId) return;
+    if (nowPlayingVideoId !== videoId) return;
     const idx = playQueue.findIndex((v) => v.videoId === videoId);
+    if (idx !== -1) {
+      track("video_complete", {
+        video_id: videoId,
+        video_title: clip(playQueue[idx].title),
+        page_type: "filter",
+      });
+    }
+    if (!autoplayOn) return;
     if (idx === -1 || idx + 1 >= playQueue.length) return;
     playTopVideo(playQueue[idx + 1], { auto: true });
   }
@@ -715,6 +749,20 @@
     try {
       localStorage.setItem("autoplay", on ? "on" : "off");
     } catch (err) {}
+  }
+
+  // Sends a Google Analytics event (the gtag snippet is in the page <head>).
+  // Does nothing if analytics didn't load — blocked, offline, or the visitor
+  // switched it off on the About page.
+  function track(name, params) {
+    try {
+      if (typeof window.gtag === "function") window.gtag("event", name, params || {});
+    } catch (err) {}
+  }
+
+  // GA4 caps text parameters at 100 characters.
+  function clip(text) {
+    return String(text || "").slice(0, 100);
   }
 
   function formatViewCount(viewCount) {

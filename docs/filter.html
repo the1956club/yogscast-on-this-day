@@ -23,6 +23,28 @@
     })();
   </script>
 
+  <!-- Google Analytics (GA4). Visitors can switch it off from the About
+       page: that sets "analytics-optout" in their browser, and Google's
+       ga-disable flag below then stops anything being sent. -->
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem("analytics-optout") === "1") {
+          window["ga-disable-G-VZWF0QL5R6"] = true;
+        }
+      } catch (err) {}
+    })();
+  </script>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZWF0QL5R6"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZWF0QL5R6');
+  </script>
+
   <!-- Clean addresses: the site lives at /, /filter and /about. GitHub Pages
        still serves the old .html addresses, so if someone arrives on one,
        quietly tidy what the address bar shows, and tell search engines which
@@ -226,7 +248,7 @@
   <div class="ad-slot" id="ad-slot-bottom" aria-hidden="true"></div>
 
   <footer class="site-footer">
-    <p>Fan-made, not affiliated with The Yogscast. Video data via the YouTube Data API.</p>
+    <p>Fan-made, not affiliated with The Yogscast. Video data via the YouTube Data API. <a href="/about#privacy">Analytics &amp; privacy</a></p>
   </footer>
 
   <script src="theme.js"></script>

@@ -23,6 +23,28 @@
     })();
   </script>
 
+  <!-- Google Analytics (GA4). Visitors can switch it off from the About
+       page: that sets "analytics-optout" in their browser, and Google's
+       ga-disable flag below then stops anything being sent. -->
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem("analytics-optout") === "1") {
+          window["ga-disable-G-VZWF0QL5R6"] = true;
+        }
+      } catch (err) {}
+    })();
+  </script>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZWF0QL5R6"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZWF0QL5R6');
+  </script>
+
   <!-- Clean addresses: the site lives at /, /filter and /about. GitHub Pages
        still serves the old .html addresses, so if someone arrives on one,
        quietly tidy what the address bar shows, and tell search engines which
@@ -101,6 +123,28 @@
         YouTube.
       </p>
 
+      <h2 id="privacy">Analytics and your privacy</h2>
+      <p>
+        This site uses Google Analytics to count visits and see which parts
+        of it get used &mdash; for example how many people visit, which
+        pages they view, and which searches, filters and videos are popular.
+        It doesn't collect your name or contact details, and the numbers are
+        only used to improve the site. Google Analytics stores a few cookies
+        in your browser to do this, and Google processes the data under its
+        own <a href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">privacy policy</a>.
+      </p>
+      <p>
+        Videos play through YouTube's privacy-enhanced (&ldquo;nocookie&rdquo;)
+        player, which only starts storing anything once you press play.
+      </p>
+      <p>
+        You can switch analytics off for this browser at any time:
+      </p>
+      <p class="analytics-optout">
+        <button type="button" class="analytics-optout-button" id="analytics-optout-button" hidden></button>
+        <span class="analytics-optout-status" id="analytics-optout-status" role="status"></span>
+      </p>
+
       <h2>Ads</h2>
       <p>
         This site doesn't run any ads at the moment. If that changes down
@@ -112,9 +156,52 @@
   <div class="ad-slot" id="ad-slot-bottom" aria-hidden="true"></div>
 
   <footer class="site-footer">
-    <p>Fan-made, not affiliated with The Yogscast. Video data via the YouTube Data API.</p>
+    <p>Fan-made, not affiliated with The Yogscast. Video data via the YouTube Data API. <a href="/about#privacy">Analytics &amp; privacy</a></p>
   </footer>
 
   <script src="theme.js"></script>
+  <script>
+    // Analytics opt-out switch. The choice is saved in this browser only;
+    // every page checks it before Google Analytics sends anything.
+    (function () {
+      var button = document.getElementById("analytics-optout-button");
+      var status = document.getElementById("analytics-optout-status");
+      var GA_ID = "G-VZWF0QL5R6";
+
+      function isOptedOut() {
+        try {
+          return localStorage.getItem("analytics-optout") === "1";
+        } catch (err) {
+          return false;
+        }
+      }
+
+      function render() {
+        var out = isOptedOut();
+        button.textContent = out ? "Turn analytics back on" : "Turn off analytics";
+        status.textContent = out
+          ? "Analytics is off for this browser."
+          : "Analytics is on for this browser.";
+        button.hidden = false;
+      }
+
+      button.addEventListener("click", function () {
+        var out = !isOptedOut();
+        try {
+          if (out) localStorage.setItem("analytics-optout", "1");
+          else localStorage.removeItem("analytics-optout");
+        } catch (err) {
+          status.textContent = "Your browser isn't letting this site save the setting.";
+          return;
+        }
+        // Takes effect straight away on this page, and on every page load
+        // after this one.
+        window["ga-disable-" + GA_ID] = out;
+        render();
+      });
+
+      render();
+    })();
+  </script>
 </body>
 </html>
